@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>모바일 최적화 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=false&libraries=clusterer"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    #locateBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <button id="locateBtn" onclick="goToMyLocation()">📍 내 위치</button>
+
+  <script>
+    let map, myLocation;
+
+    kakao.maps.load(function () {
+      const mapContainer = document.getElementById('map');
+      const mapOption = {
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 8
+      };
+      map = new kakao.maps.Map(mapContainer, mapOption);
+
+      // 위성 배경으로 설정
+      map.setMapTypeId(kakao.maps.MapTypeId.SKYVIEW);
+
+      const clusterer = new kakao.maps.MarkerClusterer({
+        map: map,
+        averageCenter: true,
+        minLevel: 7
+      });
+
+      const bounds = new kakao.maps.LatLngBounds();
+      const markers = [];
+
+      const markerData = [
+        { lat: 37.60523021, lng: 127.1030446, title: "경춘선1" },
+        { lat: 37.64405985, lng: 127.1316449, title: "경춘선3" },
+        { lat: 37.64741886, lng: 127.1827369, title: "경춘선4" },
+        { lat: 37.63675142, lng: 127.2037563, title: "경춘선5" },
+        { lat: 37.6388587,  lng: 127.2136841, title: "경춘선6" },
+        { lat: 37.6595571,  lng: 127.2847104, title: "경춘선7" },
+        { lat: 37.6574374,  lng: 127.3303823, title: "경춘선8" },
+        { lat: 37.659461,   lng: 127.334501,  title: "경춘선9" },
+        { lat: 37.7664722,  lng: 127.4507004, title: "경춘선10" },
+        { lat: 37.7683545,  lng: 127.4524344, title: "경춘선11" }
+      ];
+
+      markerData.forEach(data => {
+        const markerPosition = new kakao.maps.LatLng(data.lat, data.lng);
+        const marker = new kakao.maps.Marker({
+          position: markerPosition,
+          title: data.title
+        });
+
+        const infowindow = new kakao.maps.InfoWindow({
+          content: `<div style="padding:5px;font-size:13px;">${data.title}</div>`,
+          removable: false
+        });
+
+        infowindow.open(map, marker);
+        markers.push(marker);
+        bounds.extend(markerPosition);
+      });
+
+      clusterer.addMarkers(markers);
+      map.setBounds(bounds);
+
+      // 내 위치 표시
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          myLocation = new kakao.maps.LatLng(lat, lng);
+
+          const myMarker = new kakao.maps.Marker({
+            map: map,
+            position: myLocation,
+            image: new kakao.maps.MarkerImage(
+              "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_dot.png",
+              new kakao.maps.Size(20, 20),
+              { offset: new kakao.maps.Point(10, 10) }
+            )
+          });
+
+          const myInfo = new kakao.maps.InfoWindow({
+            content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
+            position: myLocation
+          });
+          myInfo.open(map, myMarker);
+
+          // 초기 위치 중심 이동
+          map.setCenter(myLocation);
+        }, function () {
+          alert("위치 정보를 가져올 수 없습니다.");
+        });
+      } else {
+        alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
+      }
+    });
+
+    // 내 위치로 이동하는 버튼 기능
+    function goToMyLocation() {
+      if (myLocation) {
+        map.setCenter(myLocation);
+      } else {
+        alert("위치 정보를 불러오지 못했습니다.");
+      }
+    }
+  </script>
+</body>
+</html>
