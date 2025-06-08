@@ -2,27 +2,37 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>업무 지점 지도</title>
+  <title>모바일 최적화 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
     #map { width: 100%; height: 100%; }
-    .marker-label {
+    #locateBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
       font-size: 14px;
-      background: white;
-      padding: 4px 6px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <button id="locateBtn" onclick="goToMyLocation()">내 위치</button>
 
   <script>
-    const locations = [
-   { lat 35.22780966, lng 128.7446505, title 영남 경전선-2_경상남도 김해시 진례면 신안리 535-42 },
+    let map, myLocation;
+    const completed = {};
+
+    const markerData = [
+{ lat 35.22780966, lng 128.7446505, title 영남 경전선-2_경상남도 김해시 진례면 신안리 535-42 },
 { lat 35.2430563514789, lng 128.701022879119, title 영남 경전선-3_경상남도 창원시 의창구 용동 산31-2 },
 { lat 35.24778908, lng 128.6972927, title 영남 경전선-4_경상남도 창원시 의창구 0 용동 산 1-6 },
 { lat 35.22832264, lng 128.5675715, title 영남 경전선-5_경상남도 창원시 마산회원구 0 석전동 283-1 },
@@ -193,39 +203,35 @@
 { lat 37.43100852, lng 129.1741177, title 영남 동해선17-12(포삼)_강원도 삼척시 사직동 216-24 }
     ];
 
-    let map;
-    let markers = [];
+    kakao.maps.load(() => {
+      map = new kakao.maps.Map(document.getElementById('map'), {
+        center: new kakao.maps.LatLng(markerData[0].lat, markerData[0].lng),
+        level: 8
+      });
 
-    function createMarkerImage(completed) {
-      const imageSrc = completed
-        ? "http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_green.png"
-        : "http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
-      return new kakao.maps.MarkerImage(imageSrc, new kakao.maps.Size(24, 35));
-    }
+      map.setMapTypeId(kakao.maps.MapTypeId.SKYVIEW);
 
-    function drawMarkers() {
-      markers.forEach(m => m.setMap(null));
-      markers = [];
+      const bounds = new kakao.maps.LatLngBounds();
+      const markers = [];
 
-      locations.forEach(loc => {
+      markerData.forEach((data, idx) => {
+        const pos = new kakao.maps.LatLng(data.lat, data.lng);
         const marker = new kakao.maps.Marker({
+          position: pos,
+          title: data.title,
           map: map,
-          position: new kakao.maps.LatLng(loc.lat, loc.lng),
-          title: loc.title,
-          image: createMarkerImage(loc.completed)
+          image: createMarkerImage(false)
         });
 
-        const content = `
-          <div class="marker-label">
-            <strong>${loc.title}</strong><br/>
-            <label>
-              <input type="checkbox" onclick="handleCheckboxClick(${loc.id}, this)" ${loc.completed ? 'checked disabled' : ''}/> 완료
-            </label>
-          </div>
-        `;
+        marker.idx = idx;
 
         const infowindow = new kakao.maps.InfoWindow({
-          content: content
+          content: `
+            <div style="padding:5px;font-size:13px;">
+              ${data.title}<br/>
+              <label><input type="checkbox" onclick="markComplete(${idx}, this)"> 완료</label>
+            </div>
+          `
         });
 
         kakao.maps.event.addListener(marker, 'click', () => {
@@ -233,38 +239,49 @@
         });
 
         markers.push(marker);
+        bounds.extend(pos);
       });
+
+      map.setBounds(bounds);
+      window.markers = markers;
+    });
+
+    function createMarkerImage(isComplete) {
+      const imageSrc = isComplete
+        ? "http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_green.png"
+        : "http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
+      return new kakao.maps.MarkerImage(imageSrc, new kakao.maps.Size(24, 35));
     }
 
-    window.handleCheckboxClick = function(id, checkbox) {
+    function markComplete(idx, checkbox) {
       if (!checkbox.checked) return;
-
-      const loc = locations.find(l => l.id === id);
-      loc.completed = true;
-
-      drawMarkers();
+      completed[idx] = true;
+      markers[idx].setImage(createMarkerImage(true));
       moveToNextIncomplete();
     }
 
     function moveToNextIncomplete() {
-      const next = locations.find(l => !l.completed);
-      if (next) {
-        const moveLatLon = new kakao.maps.LatLng(next.lat, next.lng);
-        map.panTo(moveLatLon);
-      } else {
-        alert("🎉 모든 지점을 완료했습니다!");
+      for (let i = 0; i < markers.length; i++) {
+        if (!completed[i]) {
+          map.panTo(markers[i].getPosition());
+          return;
+        }
       }
+      alert("🎉 모든 지점을 완료했습니다!");
     }
 
-    kakao.maps.load(function () {
-      const container = document.getElementById('map');
-      const options = {
-        center: new kakao.maps.LatLng(locations[0].lat, locations[0].lng),
-        level: 4
-      };
-      map = new kakao.maps.Map(container, options);
-      drawMarkers();
-    });
+    function goToMyLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          myLocation = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+          map.setCenter(myLocation);
+        }, () => {
+          alert("위치 정보를 가져올 수 없습니다.");
+        });
+      } else {
+        alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
+      }
+    }
   </script>
 </body>
 </html>
