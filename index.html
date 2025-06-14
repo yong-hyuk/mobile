@@ -33,6 +33,7 @@
     let map, myLocation;
     const completedSet = new Set();
 
+    // 저장 불러오기/저장 함수
     function loadCompleted() {
       const saved = localStorage.getItem('completedMarkers');
       if (saved) {
@@ -67,14 +68,26 @@
       const markerData = [
         { lat: 35.2278, lng: 128.7446, title: "영남 경전선-2" },
         { lat: 35.2431, lng: 128.7010, title: "영남 경전선-3" }
-        // 필요한 지점 추가 가능
+        // 여기에 지점 추가 가능
       ];
+
+      // 마커 이미지
+      const defaultImage = new kakao.maps.MarkerImage(
+        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
+        new kakao.maps.Size(24, 35)
+      );
+
+      const completedImage = new kakao.maps.MarkerImage(
+        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
+        new kakao.maps.Size(24, 35)
+      );
 
       markerData.forEach((data, index) => {
         const markerPosition = new kakao.maps.LatLng(data.lat, data.lng);
         const marker = new kakao.maps.Marker({
           position: markerPosition,
-          map: map
+          map: map,
+          image: completedSet.has(index) ? completedImage : defaultImage
         });
 
         const infoContent = document.createElement('div');
@@ -100,8 +113,10 @@
           checkbox.onclick = () => {
             if (checkbox.checked) {
               completedSet.add(index);
+              marker.setImage(completedImage);
             } else {
               completedSet.delete(index);
+              marker.setImage(defaultImage);
             }
             saveCompleted();
           };
@@ -114,6 +129,7 @@
       clusterer.addMarkers(markers);
       map.setBounds(bounds);
 
+      // 내 위치 마커
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
           const lat = position.coords.latitude;
@@ -139,6 +155,7 @@
       }
     }
 
+    // 내 위치 버튼
     document.getElementById("locateBtn").addEventListener("click", () => {
       if (myLocation) {
         map.setCenter(myLocation);
@@ -147,6 +164,7 @@
       }
     });
 
+    // SDK 로드 후 초기화
     window.onload = () => {
       if (typeof kakao !== 'undefined') {
         kakao.maps.load(initMap);
