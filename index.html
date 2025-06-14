@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>모바일 최적화 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
+  <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
     #map { width: 100%; height: 100%; }
@@ -26,13 +26,14 @@
 </head>
 <body>
   <div id="map"></div>
-  <button id="locateBtn" onclick="goToMyLocation()">내 위치</button>
+  <button id="locateBtn">내 위치</button>
 
   <script>
     let map, myLocation;
     const completedSet = new Set();
 
-    kakao.maps.load(function () {
+    // 지도 초기화 함수
+    function initMap() {
       const mapContainer = document.getElementById('map');
       map = new kakao.maps.Map(mapContainer, {
         center: new kakao.maps.LatLng(36.0, 129.4),
@@ -53,7 +54,7 @@
       const markerData = [
         { lat: 35.2278, lng: 128.7446, title: "영남 경전선-2" },
         { lat: 35.2431, lng: 128.7010, title: "영남 경전선-3" }
-        // 🔽 여기에 필요한 지점들을 추가하세요
+        // 여기에 필요한 지점 추가 가능
       ];
 
       markerData.forEach((data, index) => {
@@ -63,17 +64,32 @@
           map: map
         });
 
+        const infoContent = document.createElement('div');
+        infoContent.style.padding = '5px';
+        infoContent.style.fontSize = '13px';
+        infoContent.innerHTML = `
+          ${data.title}<br/>
+          <label><input type="checkbox" id="chk-${index}"/> 완료</label>
+        `;
+
         const infowindow = new kakao.maps.InfoWindow({
-          content: `<div style="padding:5px;font-size:13px;">
-                      ${data.title}<br/>
-                      <label><input type="checkbox" onclick="toggleComplete(${index})" id="chk-${index}"/> 완료</label>
-                    </div>`,
+          content: infoContent,
           removable: true
         });
 
-        kakao.maps.event.addListener(marker, 'click', function() {
+        kakao.maps.event.addListener(marker, 'click', () => {
           infowindow.open(map, marker);
-          document.getElementById(`chk-${index}`).checked = completedSet.has(index);
+          const checkbox = infoContent.querySelector(`#chk-${index}`);
+          checkbox.checked = completedSet.has(index);
+
+          checkbox.onclick = () => {
+            if (checkbox.checked) {
+              completedSet.add(index);
+            } else {
+              completedSet.delete(index);
+            }
+            console.log([...completedSet]);
+          };
         });
 
         markers.push(marker);
@@ -83,6 +99,7 @@
       clusterer.addMarkers(markers);
       map.setBounds(bounds);
 
+      // 내 위치 가져오기
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
           const lat = position.coords.latitude;
@@ -104,30 +121,27 @@
             position: myLocation
           });
           myInfo.open(map, myMarker);
-        }, function () {
-          alert("위치 정보를 가져올 수 없습니다.");
         });
-      } else {
-        alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
       }
-    });
+    }
 
-    function goToMyLocation() {
+    // 내 위치 버튼
+    document.getElementById("locateBtn").addEventListener("click", () => {
       if (myLocation) {
         map.setCenter(myLocation);
       } else {
         alert("위치 정보를 불러오지 못했습니다.");
       }
-    }
+    });
 
-    function toggleComplete(index) {
-      if (completedSet.has(index)) {
-        completedSet.delete(index);
+    // SDK 로드 후 초기화
+    window.onload = () => {
+      if (typeof kakao !== 'undefined') {
+        kakao.maps.load(initMap);
       } else {
-        completedSet.add(index);
+        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
       }
-      console.log([...completedSet]); // 완료된 인덱스들
-    }
+    };
   </script>
 </body>
 </html>
