@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>모바일 최적화 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
+  <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer&autoload=false"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
     #map { width: 100%; height: 100%; }
@@ -135,13 +135,13 @@
     });
 
     // SDK 로드 후 초기화
-    window.onload = () => {
-      if (typeof kakao !== 'undefined') {
-        kakao.maps.load(initMap);
-      } else {
-        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
-      }
-    };
+   window.onload = () => {
+  if (typeof kakao !== 'undefined') {
+    kakao.maps.load(initMap);
+  } else {
+    alert("카카오맵 로딩 실패. API 키를 확인하세요.");
+  }
+};
   </script>
 </body>
 </html>
