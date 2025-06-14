@@ -6,21 +6,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer&autoload=false"></script>
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
     #map { width: 100%; height: 100%; }
     #locateBtn {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
+      bottom: 15px;
+      right: 15px;
       z-index: 10;
-      padding: 10px 15px;
+      padding: 12px 18px;
       background-color: #007bff;
       color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
+      border-radius: 12px;
+      font-size: 16px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       cursor: pointer;
+      touch-action: manipulation;
     }
   </style>
 </head>
@@ -32,8 +33,20 @@
     let map, myLocation;
     const completedSet = new Set();
 
-    // 지도 초기화 함수
+    function loadCompleted() {
+      const saved = localStorage.getItem('completedMarkers');
+      if (saved) {
+        JSON.parse(saved).forEach(idx => completedSet.add(idx));
+      }
+    }
+
+    function saveCompleted() {
+      localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
+    }
+
     function initMap() {
+      loadCompleted();
+
       const mapContainer = document.getElementById('map');
       map = new kakao.maps.Map(mapContainer, {
         center: new kakao.maps.LatLng(36.0, 129.4),
@@ -54,7 +67,7 @@
       const markerData = [
         { lat: 35.2278, lng: 128.7446, title: "영남 경전선-2" },
         { lat: 35.2431, lng: 128.7010, title: "영남 경전선-3" }
-        // 여기에 필요한 지점 추가 가능
+        // 필요한 지점 추가 가능
       ];
 
       markerData.forEach((data, index) => {
@@ -66,10 +79,12 @@
 
         const infoContent = document.createElement('div');
         infoContent.style.padding = '5px';
-        infoContent.style.fontSize = '13px';
+        infoContent.style.fontSize = '15px';
         infoContent.innerHTML = `
           ${data.title}<br/>
-          <label><input type="checkbox" id="chk-${index}"/> 완료</label>
+          <label style="cursor:pointer;">
+            <input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료
+          </label>
         `;
 
         const infowindow = new kakao.maps.InfoWindow({
@@ -88,7 +103,7 @@
             } else {
               completedSet.delete(index);
             }
-            console.log([...completedSet]);
+            saveCompleted();
           };
         });
 
@@ -99,7 +114,6 @@
       clusterer.addMarkers(markers);
       map.setBounds(bounds);
 
-      // 내 위치 가져오기
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
           const lat = position.coords.latitude;
@@ -110,7 +124,7 @@
             map: map,
             position: myLocation,
             image: new kakao.maps.MarkerImage(
-              "https://github.com/yong-hyuk/mobile/blob/main/location.png",
+              "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
               new kakao.maps.Size(30, 30),
               { offset: new kakao.maps.Point(10, 10) }
             )
@@ -125,7 +139,6 @@
       }
     }
 
-    // 내 위치 버튼
     document.getElementById("locateBtn").addEventListener("click", () => {
       if (myLocation) {
         map.setCenter(myLocation);
@@ -134,14 +147,13 @@
       }
     });
 
-    // SDK 로드 후 초기화
-   window.onload = () => {
-  if (typeof kakao !== 'undefined') {
-    kakao.maps.load(initMap);
-  } else {
-    alert("카카오맵 로딩 실패. API 키를 확인하세요.");
-  }
-};
+    window.onload = () => {
+      if (typeof kakao !== 'undefined') {
+        kakao.maps.load(initMap);
+      } else {
+        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
+      }
+    };
   </script>
 </body>
 </html>
