@@ -102,26 +102,26 @@
       // 내 위치 가져오기
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          myLocation = new kakao.maps.LatLng(lat, lng);
+  const lat = position.coords.latitude;
+  const lng = position.coords.longitude;
+  myLocation = new kakao.maps.LatLng(lat, lng);
 
-          const myMarker = new kakao.maps.Marker({
-            map: map,
-            position: myLocation,
-            image: new kakao.maps.MarkerImage(
-              "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_dot.png",
-              new kakao.maps.Size(20, 20),
-              { offset: new kakao.maps.Point(10, 10) }
-            )
-          });
+  const myMarker = new kakao.maps.Marker({
+    map: map,
+    position: myLocation,
+    image: new kakao.maps.MarkerImage(
+      "https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png",
+      new kakao.maps.Size(27, 43),
+      { offset: new kakao.maps.Point(13, 43) }
+    )
+  });
 
-          const myInfo = new kakao.maps.InfoWindow({
-            content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
-            position: myLocation
-          });
-          myInfo.open(map, myMarker);
-        });
+  const myInfo = new kakao.maps.InfoWindow({
+    content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
+    position: myLocation
+  });
+  myInfo.open(map, myMarker);
+});
       }
     }
 
