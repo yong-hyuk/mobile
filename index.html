@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>서울 서부 지도</title>
+  <title>모바일 최적화 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer&autoload=false"></script>
   <style>
@@ -21,78 +21,28 @@
       font-size: 16px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       cursor: pointer;
-    }
-    #filterInput {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      z-index: 10;
-      padding: 8px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      width: 240px;
+      touch-action: manipulation;
     }
   </style>
 </head>
 <body>
-  <input id="filterInput" type="text" placeholder="검색 (예: 강서, 건축)" />
   <div id="map"></div>
   <button id="locateBtn">내 위치</button>
 
   <script>
-    let map;
+    let map, myLocation;
     const completedSet = new Set();
-    const markers = [];
-    const defaultMarkerImage = new kakao.maps.MarkerImage(
-      'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
-      new kakao.maps.Size(24, 35)
-    );
-    const completedMarkerImage = new kakao.maps.MarkerImage(
-      'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
-      new kakao.maps.Size(24, 35)
-    );
 
+    // 저장 불러오기/저장 함수
     function loadCompleted() {
       const saved = localStorage.getItem('completedMarkers');
       if (saved) {
-        JSON.parse(saved).forEach(title => completedSet.add(title));
+        JSON.parse(saved).forEach(idx => completedSet.add(idx));
       }
     }
 
     function saveCompleted() {
       localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
-    }
-
-    function createMarker(data, map) {
-      const position = new kakao.maps.LatLng(data.lat, data.lng);
-      const isCompleted = completedSet.has(data.title);
-      const marker = new kakao.maps.Marker({
-        position,
-        title: data.title,
-        image: isCompleted ? completedMarkerImage : defaultMarkerImage
-      });
-
-      kakao.maps.event.addListener(marker, 'click', () => {
-        if (completedSet.has(data.title)) {
-          completedSet.delete(data.title);
-          marker.setImage(defaultMarkerImage);
-        } else {
-          completedSet.add(data.title);
-          marker.setImage(completedMarkerImage);
-        }
-        saveCompleted();
-      });
-
-      markers.push({ marker, data });
-      return marker;
-    }
-
-    function filterMarkers(keyword) {
-      markers.forEach(({ marker, data }) => {
-        const isVisible = data.title.includes(keyword);
-        marker.setMap(isVisible ? map : null);
-      });
     }
 
     function initMap() {
@@ -111,6 +61,9 @@
         averageCenter: true,
         minLevel: 7
       });
+
+      const bounds = new kakao.maps.LatLngBounds();
+      const markers = [];
 
       const markerData = [
         { lat: 37.54636389, lng: 126.85168056, title: "강서-건축-002/강서구 화곡동 42-75/C" },
@@ -704,29 +657,110 @@
         { lat: 37.60501353, lng: 126.93184697, title: "임시-주택-은평구-녹번-2/은평구 녹번동 29-158/E" },
         { lat: 37.58643511, lng: 126.933668, title: "임시-주택-서대문구-홍은-1/서대문구 홍은동 265-63/C" },
         { lat: 37.48601508, lng: 126.82239203, title: "임시-주택-구로구-001/구로구 항동 1-5/E" }
-        // ... 더 많은 마커를 여기에 추가 ...
+        // 여기에 지점 추가 가능
       ];
 
-      const createdMarkers = markerData.map(data => createMarker(data, map));
-      clusterer.addMarkers(createdMarkers);
+      // 마커 이미지
+      const defaultImage = new kakao.maps.MarkerImage(
+        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
+        new kakao.maps.Size(24, 35)
+      );
 
-      document.getElementById('filterInput').addEventListener('input', e => {
-        filterMarkers(e.target.value.trim());
+      const completedImage = new kakao.maps.MarkerImage(
+        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
+        new kakao.maps.Size(24, 35)
+      );
+
+      markerData.forEach((data, index) => {
+        const markerPosition = new kakao.maps.LatLng(data.lat, data.lng);
+        const marker = new kakao.maps.Marker({
+          position: markerPosition,
+          map: map,
+          image: completedSet.has(index) ? completedImage : defaultImage
+        });
+
+        const infoContent = document.createElement('div');
+        infoContent.style.padding = '5px';
+        infoContent.style.fontSize = '15px';
+        infoContent.innerHTML = `
+          ${data.title}<br/>
+          <label style="cursor:pointer;">
+            <input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료
+          </label>
+        `;
+
+        const infowindow = new kakao.maps.InfoWindow({
+          content: infoContent,
+          removable: true
+        });
+
+        kakao.maps.event.addListener(marker, 'click', () => {
+          infowindow.open(map, marker);
+          const checkbox = infoContent.querySelector(`#chk-${index}`);
+          checkbox.checked = completedSet.has(index);
+
+          checkbox.onclick = () => {
+            if (checkbox.checked) {
+              completedSet.add(index);
+              marker.setImage(completedImage);
+            } else {
+              completedSet.delete(index);
+              marker.setImage(defaultImage);
+            }
+            saveCompleted();
+          };
+        });
+
+        markers.push(marker);
+        bounds.extend(markerPosition);
       });
 
-      document.getElementById('locateBtn').addEventListener('click', () => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(pos => {
-            const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            map.panTo(loc);
+      clusterer.addMarkers(markers);
+      map.setBounds(bounds);
+
+      // 내 위치 마커
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          myLocation = new kakao.maps.LatLng(lat, lng);
+
+          const myMarker = new kakao.maps.Marker({
+            map: map,
+            position: myLocation,
+            image: new kakao.maps.MarkerImage(
+              "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
+              new kakao.maps.Size(30, 30),
+              { offset: new kakao.maps.Point(10, 10) }
+            )
           });
-        } else {
-          alert('위치 정보를 사용할 수 없습니다.');
-        }
-      });
+
+          const myInfo = new kakao.maps.InfoWindow({
+            content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
+            position: myLocation
+          });
+          myInfo.open(map, myMarker);
+        });
+      }
     }
 
-    kakao.maps.load(initMap);
+    // 내 위치 버튼
+    document.getElementById("locateBtn").addEventListener("click", () => {
+      if (myLocation) {
+        map.setCenter(myLocation);
+      } else {
+        alert("위치 정보를 불러오지 못했습니다.");
+      }
+    });
+
+    // SDK 로드 후 초기화
+    window.onload = () => {
+      if (typeof kakao !== 'undefined') {
+        kakao.maps.load(initMap);
+      } else {
+        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
+      }
+    };
   </script>
 </body>
 </html>
