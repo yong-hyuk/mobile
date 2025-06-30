@@ -117,6 +117,9 @@
         center: new kakao.maps.LatLng(37.55, 126.91),
         level: 7
       });
+      
+     // 이 줄이 하이브리드 스타일 설정!
+     map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
 
       clusterer = new kakao.maps.MarkerClusterer({
         map, averageCenter: true, minLevel: 7
