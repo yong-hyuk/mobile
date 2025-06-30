@@ -2,38 +2,59 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>모바일 최적화 지도</title>
+  <title>자치구별 검색 가능한 건물 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer&autoload=false"></script>
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-    #map { width: 100%; height: 100%; }
-    #locateBtn {
-      position: absolute;
-      bottom: 15px;
-      right: 15px;
-      z-index: 10;
-      padding: 12px 18px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
+    html, body { margin:0; padding:0; height:100%; font-family:sans-serif; }
+    #map { width:100%; height:100%; position:relative; }
+    #controlPanel {
+      position: absolute; top: 10px; left: 10px; z-index: 10;
+      background: rgba(255,255,255,0.9); padding:10px; border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      cursor: pointer;
-      touch-action: manipulation;
+    }
+    #searchInput {
+      padding: 8px; width: 220px; font-size: 15px; border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    #locateBtn {
+      position: absolute; bottom: 15px; right: 15px; z-index: 10;
+      padding: 12px 18px; background-color: #007bff; color: white;
+      border: none; border-radius: 12px; font-size: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
     }
   </style>
 </head>
 <body>
+  <div id="controlPanel">
+    <input type="text" id="searchInput" placeholder="자치구 예: 은평구" />
+  </div>
   <div id="map"></div>
   <button id="locateBtn">내 위치</button>
 
   <script>
-    let map, myLocation;
+    let map, clusterer, myLocation;
     const completedSet = new Set();
+    let allMarkers = [];
 
-    // 저장 불러오기/저장 함수
+    const markerData = [
+      { lat: 37.59534167, lng: 126.90712222, title: "은평-건축-001/은평구 신사동 208-8/C", pdf: "pdf/은평-건축-001.pdf" },
+      { lat: 37.58323056, lng: 126.91663056, title: "은평-주택(2)-008/은평구 응암동 742-30/B", pdf: "pdf/은평-주택(2)-008.pdf" },
+      { lat: 37.60500278, lng: 126.93764167, title: "은평-주택-001/은평구 녹번동 20-57/C", pdf: "pdf/은평-주택-001.pdf" },
+      { lat: 37.501, lng: 127.026, title: "강남-건축-001/강남구 역삼동 123-45/A", pdf: "pdf/강남-건축-001.pdf" }
+      // ... 필요한 마커들 추가
+    ];
+
+    const defaultImage = new kakao.maps.MarkerImage(
+      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
+      new kakao.maps.Size(24, 35)
+    );
+
+    const completedImage = new kakao.maps.MarkerImage(
+      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
+      new kakao.maps.Size(24, 35)
+    );
+
     function loadCompleted() {
       const saved = localStorage.getItem('completedMarkers');
       if (saved) {
@@ -45,116 +66,37 @@
       localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
     }
 
-    function initMap() {
-      loadCompleted();
+    function createMarkers(filteredData) {
+      if (clusterer) clusterer.clear();
 
-      const mapContainer = document.getElementById('map');
-      map = new kakao.maps.Map(mapContainer, {
-        center: new kakao.maps.LatLng(37.55, 126.91),
-        level: 8
-      });
-
-      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
-
-      const clusterer = new kakao.maps.MarkerClusterer({
-        map: map,
-        averageCenter: true,
-        minLevel: 7
-      });
-
-      const bounds = new kakao.maps.LatLngBounds();
       const markers = [];
+      const bounds = new kakao.maps.LatLngBounds();
 
-      const markerData = [
-     { lat: 37.59534167, lng: 126.90712222, title: "은평-건축-001/은평구 신사동 208-8/C", pdf: "pdf/은평-건축-001.pdf ",
-     { lat: 37.58323056, lng: 126.91663056, title: "은평-주택(2)-008/은평구 응암동 742-30/B", pdf: "pdf/은평-주택(2)-008.pdf ",
-     { lat: 37.62689167, lng: 126.91318333, title: "은평-주택(2)-011-2/은평구 갈현동 산 11-11/C", pdf: "pdf/은평-주택(2)-011-2.pdf ",
-     { lat: 37.60032222, lng: 126.92870556, title: "은평-주택(2)-017/은평구 응암동 81-93/A", pdf: "pdf/은평-주택(2)-017.pdf ",
-     { lat: 37.62230833, lng: 126.91594444, title: "은평-주택(2)-153/은평구 갈현동 276-41/C", pdf: "pdf/은평-주택(2)-153.pdf ",
-     { lat: 37.60045278, lng: 126.92849722, title: "은평-주택(2)-155/은평구 응암동 81-92/C", pdf: "pdf/은평-주택(2)-155.pdf ",
-     { lat: 37.58515, lng: 126.90724444, title: "은평-주택(2)-157/은평구 증산동 189-59/C", pdf: "pdf/은평-주택(2)-157.pdf ",
-     { lat: 37.59843056, lng: 126.93209722, title: "은평-주택(2)-160/은평구 응암동 36-71/C", pdf: "pdf/은평-주택(2)-160.pdf ",
-     { lat: 37.58865, lng: 126.90849444, title: "은평-주택(2)-162/은평구 증산동 131-129/C", pdf: "pdf/은평-주택(2)-162.pdf ",
-     { lat: 37.592125, lng: 126.90175556, title: "은평-주택(2)-165/은평구 신사동 300-114/C", pdf: "pdf/은평-주택(2)-165.pdf ",
-     { lat: 37.59711111, lng: 126.90459444, title: "은평-주택(2)-168/은평구 신사동 237-38/C", pdf: "pdf/은평-주택(2)-168.pdf ",
-     { lat: 37.62195, lng: 126.91220278, title: "은평-주택(2)-172/은평구 갈현동 268-55/B", pdf: "pdf/은평-주택(2)-172.pdf ",
-     { lat: 37.60124722, lng: 126.93630833, title: "은평-주택(2)-173/은평구 녹번동 53-73/C", pdf: "pdf/은평-주택(2)-173.pdf ",
-     { lat: 37.60075, lng: 126.93675833, title: "은평-주택(2)-174/은평구 녹번동 21-316/C", pdf: "pdf/은평-주택(2)-174.pdf ",
-     { lat: 37.60299722, lng: 126.93670556, title: "은평-주택(2)-175/은평구 녹번동 21-323/C", pdf: "pdf/은평-주택(2)-175.pdf ",
-     { lat: 37.62448611, lng: 126.92029444, title: "은평-주택(2)-179/은평구 불광동 391-68/C", pdf: "pdf/은평-주택(2)-179.pdf ",
-     { lat: 37.62848889, lng: 126.91694444, title: "은평-주택(3)-109/은평구 갈현동 12-386/B", pdf: "pdf/은평-주택(3)-109.pdf ",
-     { lat: 37.62494167, lng: 126.91303333, title: "은평-주택(3)-110/은평구 갈현동 285-98/B", pdf: "pdf/은평-주택(3)-110.pdf ",
-     { lat: 37.59843056, lng: 126.93389444, title: "은평-주택(3)-111/은평구 응암동 35-70/C", pdf: "pdf/은평-주택(3)-111.pdf ",
-     { lat: 37.58849167, lng: 126.90804722, title: "은평-주택(3)-112/은평구 증산동 131-50/C", pdf: "pdf/은평-주택(3)-112.pdf ",
-     { lat: 37.62434722, lng: 126.91568333, title: "은평-주택(3)-258/은평구 갈현동 281-17/C", pdf: "pdf/은평-주택(3)-258.pdf ",
-     { lat: 37.62809722, lng: 126.91389722, title: "은평-주택(3)-259/은평구 갈현동 12-428/C", pdf: "pdf/은평-주택(3)-259.pdf ",
-     { lat: 37.62782778, lng: 126.91446389, title: "은평-주택(3)-260/은평구 갈현동 12-137/C", pdf: "pdf/은평-주택(3)-260.pdf ",
-     { lat: 37.62356944, lng: 126.91305, title: "은평-주택(3)-261/은평구 갈현동 275-127/C", pdf: "pdf/은평-주택(3)-261.pdf ",
-     { lat: 37.62371667, lng: 126.91261667, title: "은평-주택(3)-262/은평구 갈현동 275-57/B", pdf: "pdf/은평-주택(3)-262.pdf ",
-     { lat: 37.62763333, lng: 126.91368611, title: "은평-주택(3)-264/은평구 갈현동 300-92/C", pdf: "pdf/은평-주택(3)-264.pdf ",
-     { lat: 37.62132778, lng: 126.91626389, title: "은평-주택(3)-265/은평구 갈현동 434-14/C", pdf: "pdf/은평-주택(3)-265.pdf ",
-     { lat: 37.6039, lng: 126.93737778, title: "은평-주택(3)-267/은평구 녹번동 21-92/B", pdf: "pdf/은평-주택(3)-267.pdf ",
-     { lat: 37.60451667, lng: 126.93730833, title: "은평-주택(3)-268/은평구 녹번동 21-76/B", pdf: "pdf/은평-주택(3)-268.pdf ",
-     { lat: 37.60276944, lng: 126.93330556, title: "은평-주택(3)-269/은평구 녹번동 43-61/C", pdf: "pdf/은평-주택(3)-269.pdf ",
-     { lat: 37.602, lng: 126.93606389, title: "은평-주택(3)-270/은평구 녹번동 53-95/C", pdf: "pdf/은평-주택(3)-270.pdf ",
-     { lat: 37.62454167, lng: 126.92994167, title: "은평-주택(3)-272/은평구 불광동 170-163/C", pdf: "pdf/은평-주택(3)-272.pdf ",
-     { lat: 37.6152, lng: 126.93095833, title: "은평-주택(3)-273/은평구 불광동 245-27/C", pdf: "pdf/은평-주택(3)-273.pdf ",
-     { lat: 37.62406389, lng: 126.92264722, title: "은평-주택(3)-274/은평구 불광동 480-306/B", pdf: "pdf/은평-주택(3)-274.pdf ",
-     { lat: 37.60567222, lng: 126.91909722, title: "은평-주택(3)-276/은평구 역촌동 25-73/C", pdf: "pdf/은평-주택(3)-276.pdf ",
-     { lat: 37.59584722, lng: 126.90737778, title: "은평-주택(3)-292/은평구 신사동 231-4/B", pdf: "pdf/은평-주택(3)-292.pdf ",
-     { lat: 37.58008056, lng: 126.90151389, title: "은평-주택(3)-296/은평구 증산동 217-21/C", pdf: "pdf/은평-주택(3)-296.pdf ",
-     { lat: 37.58424722, lng: 126.896525, title: "은평-주택(3)-298/은평구 수색동 135-4/B", pdf: "pdf/은평-주택(3)-298.pdf ",
-     { lat: 37.58600556, lng: 126.89340833, title: "은평-주택(3)-299/은평구 수색동 342-6/B", pdf: "pdf/은평-주택(3)-299.pdf ",
-     { lat: 37.58588889, lng: 126.88902778, title: "은평-주택(3)-300/은평구 수색동 318-9/C", pdf: "pdf/은평-주택(3)-300.pdf ",
-     { lat: 37.58620278, lng: 126.89354722, title: "은평-주택(3)-301/은평구 수색동 349-2/C", pdf: "pdf/은평-주택(3)-301.pdf ",
-     { lat: 37.60500278, lng: 126.93764167, title: "은평-주택-001/은평구 녹번동 20-57/C", pdf: "pdf/은평-주택-001.pdf ",
-     { lat: 37.605425, lng: 126.90613889, title: "은평-주택-002/은평구 구산동 226/C", pdf: "pdf/은평-주택-002.pdf "
-        // 여기에 지점 추가 가능
-      ];
+      filteredData.forEach((data, index) => {
+        const position = new kakao.maps.LatLng(data.lat, data.lng);
+        bounds.extend(position);
 
-      // 마커 이미지
-      const defaultImage = new kakao.maps.MarkerImage(
-        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
-        new kakao.maps.Size(24, 35)
-      );
+        const marker = new kakao.maps.Marker({
+          position,
+          image: completedSet.has(index) ? completedImage : defaultImage
+        });
 
-      const completedImage = new kakao.maps.MarkerImage(
-        "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
-        new kakao.maps.Size(24, 35)
-      );
-
-     markerData.forEach((data, index) => {
-  const position = new kakao.maps.LatLng(data.lat, data.lng);
-  bounds.extend(position);
-
-  const marker = new kakao.maps.Marker({ position });
-  kakao.maps.event.addListener(marker, 'click', function() {
-    if (data.pdf) {
-      window.open(data.pdf, '_blank');  // PDF 새 창으로 열기
-    } else {
-      alert("PDF 파일이 등록되지 않았습니다.");
-    }
-  });
-});
-
-        const infoContent = document.createElement('div');
-        infoContent.style.padding = '5px';
-        infoContent.style.fontSize = '15px';
-        infoContent.innerHTML = `
-          ${data.title}<br/>
-          <label style="cursor:pointer;">
-            <input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료
-          </label>
+        const content = document.createElement('div');
+        content.style.padding = '5px';
+        content.style.fontSize = '15px';
+        content.innerHTML = `
+          <strong>${data.title}</strong><br/>
+          <label><input type="checkbox" id="chk-${index}" style="margin-right:6px;" /> 완료</label><br/>
+          ${data.pdf ? `<a href="${data.pdf}" target="_blank">[PDF 보기]</a>` : '<em>PDF 없음</em>'}
         `;
 
         const infowindow = new kakao.maps.InfoWindow({
-          content: infoContent,
-          removable: true
+          content, removable: true
         });
 
         kakao.maps.event.addListener(marker, 'click', () => {
           infowindow.open(map, marker);
-          const checkbox = infoContent.querySelector(`#chk-${index}`);
+          const checkbox = content.querySelector(`#chk-${index}`);
           checkbox.checked = completedSet.has(index);
 
           checkbox.onclick = () => {
@@ -170,22 +112,40 @@
         });
 
         markers.push(marker);
-        bounds.extend(position);
       });
 
       clusterer.addMarkers(markers);
       map.setBounds(bounds);
+    }
 
-      // 내 위치 마커
+    function initMap() {
+      loadCompleted();
+
+      map = new kakao.maps.Map(document.getElementById('map'), {
+        center: new kakao.maps.LatLng(37.55, 126.91), level: 7
+      });
+
+      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+
+      clusterer = new kakao.maps.MarkerClusterer({
+        map, averageCenter: true, minLevel: 7
+      });
+
+      createMarkers(markerData);
+
+      // 검색 필터 이벤트
+      document.getElementById("searchInput").addEventListener("input", e => {
+        const query = e.target.value.trim();
+        const filtered = markerData.filter(d => d.title.includes(query));
+        createMarkers(filtered.length ? filtered : markerData);
+      });
+
+      // 내 위치
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function (position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          myLocation = new kakao.maps.LatLng(lat, lng);
-
+        navigator.geolocation.getCurrentPosition(pos => {
+          myLocation = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
           const myMarker = new kakao.maps.Marker({
-            map: map,
-            position: myLocation,
+            map, position: myLocation,
             image: new kakao.maps.MarkerImage(
               "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
               new kakao.maps.Size(30, 30),
@@ -202,21 +162,11 @@
       }
     }
 
-    // 내 위치 버튼
-    document.getElementById("locateBtn").addEventListener("click", () => {
-      if (myLocation) {
-        map.setCenter(myLocation);
-      } else {
-        alert("위치 정보를 불러오지 못했습니다.");
-      }
-    });
-
-    // SDK 로드 후 초기화
     window.onload = () => {
       if (typeof kakao !== 'undefined') {
         kakao.maps.load(initMap);
       } else {
-        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
+        alert("카카오맵 로딩 실패. API 키 확인 필요");
       }
     };
   </script>
