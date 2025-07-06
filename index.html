@@ -549,62 +549,42 @@
       map.setBounds(bounds);
 
       // 내 위치 마커
-      if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(
     function (position) {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
       myLocation = new kakao.maps.LatLng(lat, lng);
 
-      const myMarker = new kakao.maps.Marker({
-        map: map,
-        position: myLocation,
-        image: new kakao.maps.MarkerImage(
-          "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
-          new kakao.maps.Size(30, 30),
-          { offset: new kakao.maps.Point(10, 10) }
-        )
-      });
+      if (myMarker) {
+        myMarker.setPosition(myLocation); // 기존 마커 이동
+      } else {
+        myMarker = new kakao.maps.Marker({
+          map: map,
+          position: myLocation,
+          image: new kakao.maps.MarkerImage(
+            "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
+            new kakao.maps.Size(30, 30),
+            { offset: new kakao.maps.Point(10, 10) }
+          )
+        });
 
-      map.setCenter(myLocation); // 위치로 지도 중심 이동
+        myInfo = new kakao.maps.InfoWindow({
+          content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
+          position: myLocation
+        });
+        myInfo.open(map, myMarker);
+      }
+
+      map.setCenter(myLocation);
     },
     function (error) {
-      console.error("위치 정보를 가져오는 데 실패했습니다:", error);
+      console.error("실시간 위치 추적 실패:", error);
     },
     {
-      enableHighAccuracy: true, // 고정밀 GPS 사용
-      timeout: 10000,           // 최대 10초 대기
-      maximumAge: 0             // 캐시된 위치 사용 안 함
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
     }
   );
 }
-
-          const myInfo = new kakao.maps.InfoWindow({
-            content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
-            position: myLocation
-          });
-          myInfo.open(map, myMarker);
-        });
-      }
-    }
-
-    // 내 위치 버튼
-    document.getElementById("locateBtn").addEventListener("click", () => {
-      if (myLocation) {
-        map.setCenter(myLocation);
-      } else {
-        alert("위치 정보를 불러오지 못했습니다.");
-      }
-    });
-
-    // SDK 로드 후 초기화
-    window.onload = () => {
-      if (typeof kakao !== 'undefined') {
-        kakao.maps.load(initMap);
-      } else {
-        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
-      }
-    };
-  </script>
-</body>
-</html>
