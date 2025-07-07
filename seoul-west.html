@@ -23,6 +23,13 @@
       border: none; border-radius: 12px; font-size: 16px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
     }
+    #statsBox {
+      position: absolute; bottom: 15px; left: 10px; z-index: 10;
+      background: rgba(255,255,255,0.95); padding: 10px;
+      border-radius: 10px; font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3); max-height: 200px;
+      overflow-y: auto; width: 260px;
+    }
   </style>
 </head>
 <body>
@@ -31,6 +38,7 @@
   </div>
   <div id="map"></div>
   <button id="locateBtn">내 위치</button>
+  <div id="statsBox"></div>
 
   <script>
     let map, clusterer, myMarker, myInfo, myLocation;
@@ -59,6 +67,26 @@
 
     function saveCompleted() {
       localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
+    }
+
+    function extractDistrict(title) {
+      const match = title.match(/\/([^\/]+구)/);
+      return match ? match[1] : "기타";
+    }
+
+    function updateStats(dataList) {
+      const stats = {};
+      dataList.forEach((data, index) => {
+        const district = extractDistrict(data.title);
+        if (!stats[district]) stats[district] = { total: 0, completed: 0 };
+        stats[district].total++;
+        if (completedSet.has(index)) stats[district].completed++;
+      });
+
+      const box = document.getElementById("statsBox");
+      box.innerHTML = "<strong>자치구별 완료 현황</strong><br/><br/>" + Object.entries(stats).map(([district, { total, completed }]) => {
+        return `${district}: ${completed} / ${total} 완료`;
+      }).join("<br/>");
     }
 
     function createMarkers(filtered) {
@@ -99,6 +127,7 @@
               marker.setImage(defaultImage);
             }
             saveCompleted();
+            updateStats(filtered);
           };
         });
 
@@ -107,6 +136,8 @@
 
       clusterer.addMarkers(markers);
       if (filtered.length > 0) map.setBounds(bounds);
+
+      updateStats(filtered);
     }
 
     window.onload = () => {
@@ -159,7 +190,7 @@
                 myInfo.setPosition(myLocation);
               }
 
-              map.setCenter(myLocation); // 지도 자동 이동
+              map.setCenter(myLocation);
             },
             (error) => {
               alert("위치 정보를 가져오지 못했습니다.");
