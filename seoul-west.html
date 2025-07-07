@@ -134,24 +134,62 @@
       });
 
       document.getElementById("locateBtn").addEventListener("click", () => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(pos => {
-            const myLoc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-            const myMarker = new kakao.maps.Marker({
-              map, position: myLoc,
-              image: new kakao.maps.MarkerImage(
-                "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
-                new kakao.maps.Size(30, 30), { offset: new kakao.maps.Point(10, 10) }
-              )
-            });
-            new kakao.maps.InfoWindow({
-              content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
-              position: myLoc
-            }).open(map, myMarker);
-            map.setCenter(myLoc);
-          });
-        }
-      });
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            myLocation = new kakao.maps.LatLng(lat, lng);
+
+            if (!myMarker) {
+              myMarker = new kakao.maps.Marker({
+                map: map,
+                position: myLocation,
+                image: new kakao.maps.MarkerImage(
+                  "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
+                  new kakao.maps.Size(30, 30),
+                  { offset: new kakao.maps.Point(10, 10) }
+                )
+              });
+
+              myInfo = new kakao.maps.InfoWindow({
+                content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
+                position: myLocation
+              });
+              myInfo.open(map, myMarker);
+            } else {
+              myMarker.setPosition(myLocation);
+              myInfo.setPosition(myLocation);
+            }
+          },
+          (error) => {
+            alert("위치 정보를 가져오지 못했습니다.");
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      }
+    }
+
+    // 내 위치 버튼
+    document.getElementById("locateBtn").addEventListener("click", () => {
+      if (myLocation) {
+        map.setCenter(myLocation);
+      } else {
+        alert("위치 정보를 불러오지 못했습니다.");
+      }
+    });
+
+    // 카카오맵 로드
+    window.onload = () => {
+      if (typeof kakao !== 'undefined') {
+        kakao.maps.load(initMap);
+      } else {
+        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
+      }
     };
   </script>
 </body>
