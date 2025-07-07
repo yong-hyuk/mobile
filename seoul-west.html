@@ -34,106 +34,39 @@
   <button id="locateBtn">내 위치</button>
 
   <script>
-    let map, clusterer;
-    const completedSet = new Set();
-    const markerData = [
-      { lat: 37.59534, lng: 126.90712, title: "은평-건축-001/은평구 신사동 208-8/C", pdf: "pdf/은평-건축-001.pdf" },
-      { lat: 37.58323, lng: 126.91663, title: "은평-주택(2)-008/은평구 응암동 742-30/B", pdf: "pdf/은평-주택(2)-008.pdf" },
-      { lat: 37.60500, lng: 126.93764, title: "은평-주택-001/은평구 녹번동 20-57/C", pdf: "pdf/은평-주택-001.pdf" },
-      { lat: 37.50100, lng: 127.02600, title: "강남-건축-001/강남구 역삼동 123-45/A", pdf: "pdf/강남-건축-001.pdf" }
-    ];
+  let map, clusterer;
+  let myMarker, myInfo, myLocation;
 
-    const defaultImage = new kakao.maps.MarkerImage(
-      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
-      new kakao.maps.Size(24, 35)
-    );
-    const completedImage = new kakao.maps.MarkerImage(
-      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
-      new kakao.maps.Size(24, 35)
-    );
+  const completedSet = new Set();
+  const markerData = [
+    { lat: 37.59534, lng: 126.90712, title: "은평-건축-001/은평구 신사동 208-8/C", pdf: "pdf/은평-건축-001.pdf" },
+    { lat: 37.58323, lng: 126.91663, title: "은평-주택(2)-008/은평구 응암동 742-30/B", pdf: "pdf/은평-주택(2)-008.pdf" },
+    { lat: 37.60500, lng: 126.93764, title: "은평-주택-001/은평구 녹번동 20-57/C", pdf: "pdf/은평-주택-001.pdf" },
+    { lat: 37.50100, lng: 127.02600, title: "강남-건축-001/강남구 역삼동 123-45/A", pdf: "pdf/강남-건축-001.pdf" }
+  ];
 
-    function loadCompleted() {
-      const saved = localStorage.getItem('completedMarkers');
-      if (saved) JSON.parse(saved).forEach(i => completedSet.add(i));
-    }
+  window.onload = () => {
+    loadCompleted();
 
-    function saveCompleted() {
-      localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
-    }
+    map = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(37.55, 126.91),
+      level: 7
+    });
+    map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
 
-    function createMarkers(filtered) {
-      if (clusterer) clusterer.clear();
+    clusterer = new kakao.maps.MarkerClusterer({
+      map, averageCenter: true, minLevel: 7
+    });
 
-      const markers = [];
-      const bounds = new kakao.maps.LatLngBounds();
+    createMarkers(markerData);
 
-      filtered.forEach((data, index) => {
-        const position = new kakao.maps.LatLng(data.lat, data.lng);
-        bounds.extend(position);
+    document.getElementById("searchInput").addEventListener("input", e => {
+      const keyword = e.target.value.trim();
+      const result = markerData.filter(d => d.title.includes(keyword));
+      createMarkers(result.length > 0 ? result : markerData);
+    });
 
-        const marker = new kakao.maps.Marker({
-          position,
-          image: completedSet.has(index) ? completedImage : defaultImage
-        });
-
-        const info = document.createElement('div');
-        info.style.padding = '5px';
-        info.style.fontSize = '14px';
-        info.innerHTML = `
-          <strong>${data.title}</strong><br/>
-          <label><input type="checkbox" id="chk-${index}" style="margin-right:6px;" /> 완료</label><br/>
-          <a href="${data.pdf}" target="_blank">[PDF 보기]</a>
-        `;
-
-        const infowindow = new kakao.maps.InfoWindow({ content: info, removable: true });
-
-        kakao.maps.event.addListener(marker, 'click', () => {
-          infowindow.open(map, marker);
-          const chk = info.querySelector(`#chk-${index}`);
-          chk.checked = completedSet.has(index);
-          chk.onclick = () => {
-            if (chk.checked) {
-              completedSet.add(index);
-              marker.setImage(completedImage);
-            } else {
-              completedSet.delete(index);
-              marker.setImage(defaultImage);
-            }
-            saveCompleted();
-          };
-        });
-
-        markers.push(marker);
-      });
-
-      clusterer.addMarkers(markers);
-      if (filtered.length > 0) map.setBounds(bounds);
-    }
-
-    window.onload = () => {
-      loadCompleted();
-
-      map = new kakao.maps.Map(document.getElementById('map'), {
-        center: new kakao.maps.LatLng(37.55, 126.91),
-        level: 7
-      });
-      
-     // 이 줄이 하이브리드 스타일 설정!
-     map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
-
-      clusterer = new kakao.maps.MarkerClusterer({
-        map, averageCenter: true, minLevel: 7
-      });
-
-      createMarkers(markerData);
-
-      document.getElementById("searchInput").addEventListener("input", e => {
-        const keyword = e.target.value.trim();
-        const result = markerData.filter(d => d.title.includes(keyword));
-        createMarkers(result.length > 0 ? result : markerData);
-      });
-
-      document.getElementById("locateBtn").addEventListener("click", () => {
+    document.getElementById("locateBtn").addEventListener("click", () => {
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
           (position) => {
@@ -161,35 +94,21 @@
               myMarker.setPosition(myLocation);
               myInfo.setPosition(myLocation);
             }
+
+            map.setCenter(myLocation); // ✅ 자동으로 지도 중심 이동
           },
           (error) => {
             alert("위치 정보를 가져오지 못했습니다.");
           },
           {
             enableHighAccuracy: true,
-            timeout: 5000,
+            timeout: 10000,
             maximumAge: 0
           }
         );
-      }
-   
-    // 내 위치 버튼
-    document.getElementById("locateBtn").addEventListener("click", () => {
-      if (myLocation) {
-        map.setCenter(myLocation);
       } else {
-        alert("위치 정보를 불러오지 못했습니다.");
+        alert("이 브라우저에서는 위치 정보가 지원되지 않습니다.");
       }
     });
-
-    // 카카오맵 로드
-    window.onload = () => {
-      if (typeof kakao !== 'undefined') {
-        kakao.maps.load(initMap);
-      } else {
-        alert("카카오맵 로딩 실패. API 키를 확인하세요.");
-      }
-    };
-  </script>
-</body>
-</html>
+  };
+</script>
