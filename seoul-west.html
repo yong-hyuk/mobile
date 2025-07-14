@@ -1249,7 +1249,7 @@
       filteredData.forEach(data => {
         const position = new kakao.maps.LatLng(data.lat, data.lng);
         const iconUrl = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
-        const markerImage = new kakao.maps.MarkerImage(iconUrl, new kakao.maps.Size(32, 32));
+        const markerImage = new kakao.maps.MarkerImage(iconUrl, new kakao.maps.Size(20, 28));
 
         const marker = new kakao.maps.Marker({ position, map, image: markerImage });
 
