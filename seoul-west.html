@@ -46,7 +46,7 @@
     const completedIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
 
     const markerData = [
-          { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
+        { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
      { lat: 37.488175, lng: 127.036711111111, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" },
      { lat: 37.4808638888889, lng: 127.081063888889, title: "강남-주택-002(1)/강남구/C", pdf: "pdf/강남-주택-002(1).pdf" },
@@ -1208,7 +1208,6 @@
      { lat: 37.4874666666667, lng: 127.124513888889, title: "옹벽(문정동 40-17)/송파구/B", pdf: "pdf/옹벽(문정동 40-17).pdf" },
      { lat: 37.5563055555556, lng: 127.147016666667, title: "서울 강동 고덕 N1지구/강동구/C", pdf: "pdf/서울 강동 고덕 N1지구.pdf" }
 
-      // 여기에 더 많은 지점 추가 가능
     ];
 
     function isCompleted(title) {
@@ -1225,60 +1224,75 @@
     }
 
     function updateStats(district) {
-      let total = 0, completed = 0;
+      let total = 0;
+      let completed = 0;
       markerData.forEach(data => {
         if (extractDistrict(data.title) === district) {
           total++;
           if (isCompleted(data.title)) completed++;
         }
       });
-      document.getElementById("statsBox").innerHTML =
-        `<strong>${district} 완료 현황</strong><br>총 지점: ${total}<br>완료 지점: ${completed}`;
+
+      const html =
+        `<strong>${district} 완료 현황</strong><br>` +
+        `총 지점: ${total}<br>` +
+        `완료 지점: ${completed}`;
+      document.getElementById("statsBox").innerHTML = html;
     }
 
-    function renderMarkers(filteredData) {
+    function renderMap(filteredData = markerData) {
+      const center = new kakao.maps.LatLng(37.5665, 126.9780);
+      const mapContainer = document.getElementById("map");
+      map = new kakao.maps.Map(mapContainer, { center, level: 8 });
+      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+
       filteredData.forEach(data => {
         const position = new kakao.maps.LatLng(data.lat, data.lng);
         const iconUrl = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
         const markerImage = new kakao.maps.MarkerImage(iconUrl, new kakao.maps.Size(20, 28));
+
         const marker = new kakao.maps.Marker({ position, map, image: markerImage });
 
         const infoHtml =
-          `<div style="padding:5px;font-size:13px;">
-            <strong>${data.title}</strong><br/>
-            <label><input type="checkbox" ${isCompleted(data.title) ? "checked" : ""}
-              onchange="toggleComplete('${data.title}', this, '${data.lat}', '${data.lng}')"/> 완료</label><br/>
-            <a href="${data.pdf}" target="_blank">[PDF 보기]</a>
-          </div>`;
+          `<div style="padding:5px;font-size:13px;">` +
+          `<strong>${data.title}</strong><br/>` +
+          `<label><input type="checkbox" ${isCompleted(data.title) ? "checked" : ""} onchange="toggleComplete('${data.title}')"/> 완료</label><br/>` +
+          `<a href="${data.pdf}" target="_blank">[PDF 보기]</a></div>`;
 
         const infoWindow = new kakao.maps.InfoWindow({ content: infoHtml, removable: true });
+
         kakao.maps.event.addListener(marker, "click", () => {
           infoWindow.open(map, marker);
         });
       });
     }
 
-    window.toggleComplete = function(title, checkbox, lat, lng) {
-      setCompleted(title, checkbox.checked);
-      const newIconUrl = checkbox.checked ? completedIconUrl : defaultIconUrl;
-      const newImage = new kakao.maps.MarkerImage(newIconUrl, new kakao.maps.Size(24, 35));
-
-      // 찾은 마커 위치에서 아이콘 업데이트 (간단 처리)
-      const position = new kakao.maps.LatLng(parseFloat(lat), parseFloat(lng));
-      new kakao.maps.Marker({ position, map, image: newImage });
-
+    window.toggleComplete = function(title) {
+      setCompleted(title, !isCompleted(title));
       const keyword = document.getElementById("searchInput").value.trim();
-      if (keyword) updateStats(extractDistrict(title));
+      const filtered = keyword ? markerData.filter(d => d.title.includes(keyword)) : markerData;
+      renderMap(filtered);
+
+      if (keyword) {
+        const district = extractDistrict(filtered[0]?.title || "");
+        updateStats(district);
+      } else {
+        document.getElementById("statsBox").innerHTML = "";
+      }
     };
 
-    document.getElementById("searchInput").addEventListener("input", function() {
+    document.getElementById("searchInput").addEventListener("input", function () {
       const keyword = this.value.trim();
-      const filtered = keyword ? markerData.filter(d => d.title.includes(keyword)) : markerData;
-      map.setCenter(new kakao.maps.LatLng(37.5665, 126.9780));
-      map.setLevel(8);
-      renderMarkers(filtered);
-      document.getElementById("statsBox").innerHTML = "";
-      if (filtered.length > 0) updateStats(extractDistrict(filtered[0].title));
+      if (keyword === "") {
+        renderMap();
+        document.getElementById("statsBox").innerHTML = "";
+      } else {
+        const filtered = markerData.filter(d => d.title.includes(keyword));
+        renderMap(filtered);
+
+        const district = extractDistrict(filtered[0]?.title || "");
+        updateStats(district);
+      }
     });
 
     document.getElementById("locateBtn").addEventListener("click", () => {
@@ -1288,17 +1302,19 @@
           map.setCenter(loc);
           if (userMarker) userMarker.setMap(null);
           userMarker = new kakao.maps.Marker({ position: loc, map });
+        }, err => {
+          alert("위치 추적 실패: " + err.message);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10000
         });
       } else {
-        alert("이 브라우저는 위치 추적을 지원하지 않습니다.");
+        alert("이 브라우저에서는 위치 찾기를 지원하지 않습니다.");
       }
     });
 
-    // 지도 초기 렌더링
-    const center = new kakao.maps.LatLng(37.5665, 126.9780);
-    map = new kakao.maps.Map(document.getElementById("map"), { center, level: 8 });
-    map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
-    renderMarkers(markerData);
+    renderMap();
   </script>
 </body>
 </html>
