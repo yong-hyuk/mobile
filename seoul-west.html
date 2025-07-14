@@ -1,51 +1,70 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <title>2025 서울 주택사면 대상지</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true&libraries=clusterer"></script>
+  <meta charset="UTF-8" />
+  <title>서울 서부 지도</title>
   <style>
-    html, body { margin:0; padding:0; height:100%; font-family:sans-serif; }
-    #map { width:100%; height:100%; }
-    #controlPanel {
-      position: absolute; top: 10px; left: 10px; z-index: 10;
-      background: rgba(255,255,255,0.95); padding:10px; border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #controls {
+      height: 40px;
+      padding: 5px 10px;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    #searchInput {
-      padding: 8px; width: 220px; font-size: 15px;
-      border: 1px solid #ccc; border-radius: 6px;
-    }
-    #locateBtn {
-      position: absolute; bottom: 15px; right: 15px; z-index: 10;
-      padding: 12px 18px; background-color: #007bff; color: white;
-      border: none; border-radius: 12px; font-size: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
-    }
-    #statsBox {
-      position: absolute; bottom: 15px; left: 10px; z-index: 10;
-      background: rgba(255,255,255,0.95); padding: 10px;
-      border-radius: 10px; font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3); max-height: 200px;
-      overflow-y: auto; width: 260px;
+    #map {
+      width: 100%;
+      height: calc(100vh - 40px);
     }
   </style>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
 </head>
 <body>
-  <div id="controlPanel">
-    <input type="text" id="searchInput" placeholder="자치구 이름 (예: 은평구)" />
-  </div>
-  <div id="map"></div>
-  <button id="locateBtn">내 위치</button>
-  <div id="statsBox"></div>
 
-  <script>
-    let map, clusterer, myMarker, myInfo, myLocation;
-    const completedSet = new Set();
+<div id="controls">
+  <select id="districtSelect">
+    <option value="">전체 자치구</option>
+    <select id="districtSelect">
+  <option value="">-- 전체 보기 --</option>
+  <option value="강남구">강남구</option>
+  <option value="강동구">강동구</option>
+  <option value="강북구">강북구</option>
+  <option value="강서구">강서구</option>
+  <option value="관악구">관악구</option>
+  <option value="광진구">광진구</option>
+  <option value="구로구">구로구</option>
+  <option value="금천구">금천구</option>
+  <option value="노원구">노원구</option>
+  <option value="도봉구">도봉구</option>
+  <option value="동대문구">동대문구</option>
+  <option value="동작구">동작구</option>
+  <option value="마포구">마포구</option>
+  <option value="서대문구">서대문구</option>
+  <option value="서초구">서초구</option>
+  <option value="성동구">성동구</option>
+  <option value="성북구">성북구</option>
+  <option value="송파구">송파구</option>
+  <option value="양천구">양천구</option>
+  <option value="영등포구">영등포구</option>
+  <option value="용산구">용산구</option>
+  <option value="은평구">은평구</option>
+  <option value="종로구">종로구</option>
+  <option value="중구">중구</option>
+  <option value="중랑구">중랑구</option>
+</select>
 
-    const markerData = [
-         { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
+    <!-- 나머지 자치구도 추가 가능 -->
+  </select>
+  <button onclick="moveToMyLocation()">내 위치</button>
+</div>
+
+<div id="map"></div>
+
+<script>
+// 🗺️ 데이터: 위도/경도, 고유 title, PDF 경로
+const locations = [
+   { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
      { lat: 37.488175, lng: 127.036711111111, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" },
      { lat: 37.4808638888889, lng: 127.081063888889, title: "강남-주택-002(1)/강남구/C", pdf: "pdf/강남-주택-002(1).pdf" },
@@ -1206,163 +1225,99 @@
      { lat: 37.4876805555556, lng: 127.124491666667, title: "옹벽(문정동 40-16)/송파구/B", pdf: "pdf/옹벽(문정동 40-16).pdf" },
      { lat: 37.4874666666667, lng: 127.124513888889, title: "옹벽(문정동 40-17)/송파구/B", pdf: "pdf/옹벽(문정동 40-17).pdf" },
      { lat: 37.5563055555556, lng: 127.147016666667, title: "서울 강동 고덕 N1지구/강동구/C", pdf: "pdf/서울 강동 고덕 N1지구.pdf" }
-    ];
+  // 전체 데이터로 확장 가능
+];
 
-    const defaultImage = new kakao.maps.MarkerImage(
-      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png",
-      new kakao.maps.Size(24, 35)
-    );
-    const completedImage = new kakao.maps.MarkerImage(
-      "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
-      new kakao.maps.Size(24, 35)
-    );
+let map, clusterer, markers = [];
 
-    function loadCompleted() {
-      const saved = localStorage.getItem('completedMarkers');
-      if (saved) JSON.parse(saved).forEach(i => completedSet.add(i));
-    }
+// 아이콘 경로는 기존 pin 파일을 그대로 사용
+function getMarkerIcon(title, completed) {
+  const grade = title.split("/")[1]; // A, B, C 등
+  const suffix = completed ? "-done" : "";
+  return new kakao.maps.MarkerImage(
+    `img/pin-${grade}${suffix}.png`,
+    new kakao.maps.Size(24, 35)
+  );
+}
 
-    function saveCompleted() {
-      localStorage.setItem('completedMarkers', JSON.stringify([...completedSet]));
-    }
+function initMap() {
+  map = new kakao.maps.Map(document.getElementById('map'), {
+    center: new kakao.maps.LatLng(37.5665, 126.978),
+    level: 6,
+    mapTypeId: kakao.maps.MapTypeId.HYBRID
+  });
 
-    function extractDistrict(title) {
-      const match = title.match(/\/([^\/]+구)/);
-      return match ? match[1] : "기타";
-    }
+  clusterer = new kakao.maps.MarkerClusterer({
+    map: map,
+    averageCenter: true,
+    minLevel: 5
+  });
 
-    function updateStats(dataList) {
-      const stats = {};
-      dataList.forEach((data, index) => {
-        const district = extractDistrict(data.title);
-        if (!stats[district]) stats[district] = { total: 0, completed: 0 };
-        stats[district].total++;
-        if (completedSet.has(index)) stats[district].completed++;
-      });
+  renderMarkers(locations);
+}
 
-      const box = document.getElementById("statsBox");
-      box.innerHTML = "<strong>자치구별 완료 현황</strong><br/><br/>" + Object.entries(stats).map(([district, { total, completed }]) => {
-        return `${district}: ${completed} / ${total} 완료`;
-      }).join("<br/>");
-    }
+function renderMarkers(list) {
+  markers.forEach(m => m.setMap(null));
+  clusterer.clear();
+  markers = [];
 
-    function createMarkers(filtered) {
-      if (clusterer) clusterer.clear();
-      const markers = [];
-      const bounds = new kakao.maps.LatLngBounds();
+  list.forEach(loc => {
+    const markerId = loc.title.trim();
+    const isCompleted = localStorage.getItem(markerId) === "true";
 
-      filtered.forEach((data, index) => {
-        const position = new kakao.maps.LatLng(data.lat, data.lng);
-        bounds.extend(position);
+    const marker = new kakao.maps.Marker({
+      map: map,
+      position: new kakao.maps.LatLng(loc.lat, loc.lng),
+      title: loc.title,
+      image: getMarkerIcon(markerId, isCompleted)
+    });
 
-        const marker = new kakao.maps.Marker({
-          position,
-          image: completedSet.has(index) ? completedImage : defaultImage
-        });
+    marker.completed = isCompleted;
 
-        const info = document.createElement('div');
-        info.style.padding = '5px';
-        info.style.fontSize = '14px';
-        info.innerHTML = `
-          <strong>${data.title}</strong><br/>
-          <label><input type="checkbox" id="chk-${index}" style="margin-right:6px;" /> 완료</label><br/>
-          <a href="${data.pdf}" target="_blank">[PDF 보기]</a>
-        `;
+    // 완료 상태 토글
+    kakao.maps.event.addListener(marker, "click", function () {
+      marker.completed = !marker.completed;
+      localStorage.setItem(markerId, marker.completed);
+      marker.setImage(getMarkerIcon(markerId, marker.completed));
+    });
 
-        const infowindow = new kakao.maps.InfoWindow({ content: info, removable: true });
+    // PDF 링크 (인포윈도우 마우스오버)
+    kakao.maps.event.addListener(marker, "mouseover", function () {
+      const iwContent = `<div style="padding:5px;font-size:13px;">${loc.title}<br/><a href="${loc.pdf}" target="_blank">[PDF]</a></div>`;
+      const iw = new kakao.maps.InfoWindow({ content: iwContent });
+      iw.open(map, marker);
+    });
 
-        kakao.maps.event.addListener(marker, 'click', () => {
-          infowindow.open(map, marker);
-          const chk = info.querySelector(`#chk-${index}`);
-          chk.checked = completedSet.has(index);
-          chk.onclick = () => {
-            if (chk.checked) {
-              completedSet.add(index);
-              marker.setImage(completedImage);
-            } else {
-              completedSet.delete(index);
-              marker.setImage(defaultImage);
-            }
-            saveCompleted();
-            updateStats(filtered);
-          };
-        });
+    markers.push(marker);
+  });
 
-        markers.push(marker);
-      });
+  clusterer.addMarkers(markers);
+}
 
-      clusterer.addMarkers(markers);
-      if (filtered.length > 0) map.setBounds(bounds);
+function filterByDistrict(district) {
+  if (!district) renderMarkers(locations);
+  else renderMarkers(locations.filter(loc => loc.title.includes(district)));
+}
 
-      updateStats(filtered);
-    }
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  document.getElementById('districtSelect').addEventListener('change', function () {
+    filterByDistrict(this.value);
+  });
+});
 
-    window.onload = () => {
-      loadCompleted();
+function moveToMyLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const latlng = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+      const marker = new kakao.maps.Marker({ map: map, position: latlng, title: "내 위치" });
+      map.setCenter(latlng);
+    });
+  } else {
+    alert("위치 서비스를 지원하지 않습니다.");
+  }
+}
+</script>
 
-      map = new kakao.maps.Map(document.getElementById('map'), {
-        center: new kakao.maps.LatLng(37.55, 126.91),
-        level: 7
-      });
-      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
-
-      clusterer = new kakao.maps.MarkerClusterer({
-        map, averageCenter: true, minLevel: 7
-      });
-
-      createMarkers(markerData);
-
-      document.getElementById("searchInput").addEventListener("input", e => {
-        const keyword = e.target.value.trim();
-        const result = markerData.filter(d => d.title.includes(keyword));
-        createMarkers(result.length > 0 ? result : markerData);
-      });
-
-      document.getElementById("locateBtn").addEventListener("click", () => {
-        if (navigator.geolocation) {
-          navigator.geolocation.watchPosition(
-            (position) => {
-              const lat = position.coords.latitude;
-              const lng = position.coords.longitude;
-              myLocation = new kakao.maps.LatLng(lat, lng);
-
-              if (!myMarker) {
-                myMarker = new kakao.maps.Marker({
-                  map: map,
-                  position: myLocation,
-                  image: new kakao.maps.MarkerImage(
-                    "https://github.com/yong-hyuk/mobile/blob/main/location.png?raw=true",
-                    new kakao.maps.Size(30, 30),
-                    { offset: new kakao.maps.Point(10, 10) }
-                  )
-                });
-
-                myInfo = new kakao.maps.InfoWindow({
-                  content: '<div style="padding:5px;font-size:13px;">내 위치</div>',
-                  position: myLocation
-                });
-                myInfo.open(map, myMarker);
-              } else {
-                myMarker.setPosition(myLocation);
-                myInfo.setPosition(myLocation);
-              }
-
-              map.setCenter(myLocation);
-            },
-            (error) => {
-              alert("위치 정보를 가져오지 못했습니다.");
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
-            }
-          );
-        } else {
-          alert("이 브라우저에서는 위치 정보가 지원되지 않습니다.");
-        }
-      });
-    };
-  </script>
 </body>
 </html>
