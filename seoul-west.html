@@ -20,8 +20,8 @@
       position: absolute; bottom: 15px; left: 10px; z-index: 10;
       background: rgba(255,255,255,0.95); padding: 10px;
       border-radius: 10px; font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3); max-height: 200px;
-      overflow-y: auto; width: 260px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3); max-height: 260px;
+      overflow-y: auto; width: 280px;
     }
     #locateBtn {
       position: absolute; bottom: 15px; right: 15px; z-index: 10;
@@ -41,22 +41,23 @@
 
   <script>
     let map, userMarker;
-    const defaultIconUrl = "https://cdn-icons-png.flaticon.com/512/545/545682.png";
-    const completedIconUrl = "https://cdn-icons-png.flaticon.com/512/845/845646.png";
+
+    const defaultIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
+    const completedIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
 
     const markerData = [
       { lat: 37.51635, lng: 127.06153, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
       { lat: 37.49857, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
       { lat: 37.48817, lng: 127.03671, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" }
-      // 여기에 다른 지점 추가 가능
+      // 필요한 데이터 추가
     ];
-
-    function markComplete(title) {
-      localStorage.setItem(`completed-${title}`, "true");
-    }
 
     function isCompleted(title) {
       return localStorage.getItem(`completed-${title}`) === "true";
+    }
+
+    function setCompleted(title, value) {
+      localStorage.setItem(`completed-${title}`, value ? "true" : "false");
     }
 
     function countCompleted(keyword) {
@@ -66,9 +67,22 @@
     function renderStats(keyword) {
       const total = markerData.filter(item => item.title.includes(keyword)).length;
       const completed = countCompleted(keyword);
-      document.getElementById("statsBox").innerHTML =
-        `<b>${keyword}</b><br>총 지점: ${total}<br>완료 지점: ${completed}`;
+      let html = `<b>${keyword}</b><br>총 지점: ${total}<br>완료 지점: ${completed}<hr>`;
+      markerData.filter(item => item.title.includes(keyword)).forEach(item => {
+        const checked = isCompleted(item.title) ? "checked" : "";
+        html += `<label><input type="checkbox" onchange="toggleItem('${item.title}')" ${checked}/> ${item.title}</label><br>`;
+      });
+      document.getElementById("statsBox").innerHTML = html;
     }
+
+    window.toggleItem = function(title) {
+      const current = isCompleted(title);
+      setCompleted(title, !current);
+      const keyword = document.getElementById("searchInput").value.trim();
+      const filtered = keyword ? markerData.filter(item => item.title.includes(keyword)) : markerData;
+      renderMap(filtered);
+      if (keyword) renderStats(keyword);
+    };
 
     function renderMap(filteredData = markerData) {
       const mapContainer = document.getElementById("map");
@@ -76,9 +90,9 @@
       map = new kakao.maps.Map(mapContainer, mapOption);
       map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
 
-      filteredData.forEach(data => {
-        const position = new kakao.maps.LatLng(data.lat, data.lng);
-        const iconUrl = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
+      filteredData.forEach(item => {
+        const position = new kakao.maps.LatLng(item.lat, item.lng);
+        const iconUrl = isCompleted(item.title) ? completedIconUrl : defaultIconUrl;
         const markerImage = new kakao.maps.MarkerImage(iconUrl, new kakao.maps.Size(32, 32));
 
         const marker = new kakao.maps.Marker({
@@ -88,10 +102,10 @@
         });
 
         kakao.maps.event.addListener(marker, "click", () => {
-          markComplete(data.title);
-          alert(`✅ 완료 처리: ${data.title}`);
+          const now = isCompleted(item.title);
+          setCompleted(item.title, !now);
           const keyword = document.getElementById("searchInput").value.trim();
-          const filtered = keyword ? markerData.filter(item => item.title.includes(keyword)) : markerData;
+          const filtered = keyword ? markerData.filter(i => i.title.includes(keyword)) : markerData;
           renderMap(filtered);
           if (keyword) renderStats(keyword);
         });
@@ -110,26 +124,24 @@
       }
     });
 
-    // 실시간 위치 추적
     document.getElementById("locateBtn").addEventListener("click", function() {
       if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
+        navigator.geolocation.watchPosition(function(pos) {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
           const loc = new kakao.maps.LatLng(lat, lng);
           map.setCenter(loc);
-
           if (userMarker) userMarker.setMap(null);
           userMarker = new kakao.maps.Marker({ position: loc, map: map });
-        }, function(error) {
-          alert("📡 위치 추적에 실패했습니다: " + error.message);
+        }, function(err) {
+          alert("위치 추적 실패: " + err.message);
         }, {
           enableHighAccuracy: true,
           maximumAge: 0,
           timeout: 10000
         });
       } else {
-        alert("이 브라우저는 위치 추적을 지원하지 않습니다.");
+        alert("위치 찾기를 지원하지 않습니다.");
       }
     });
 
