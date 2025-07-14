@@ -23,6 +23,12 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.3); max-height: 200px;
       overflow-y: auto; width: 260px;
     }
+    #locateBtn {
+      position: absolute; bottom: 15px; right: 15px; z-index: 10;
+      padding: 12px 18px; background-color: #007bff; color: white;
+      border: none; border-radius: 12px; font-size: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -31,17 +37,21 @@
   </div>
   <div id="map"></div>
   <div id="statsBox"></div>
+  <button id="locateBtn">실시간 위치 추적</button>
 
   <script>
-    let map;
+    let map, userMarker;
+    const defaultIconUrl = "https://cdn-icons-png.flaticon.com/512/545/545682.png";
+    const completedIconUrl = "https://cdn-icons-png.flaticon.com/512/845/845646.png";
+
     const markerData = [
-      { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
-      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
-      { lat: 37.488175, lng: 127.036711111111, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" },
-      // 다른 지점들 추가...
+      { lat: 37.51635, lng: 127.06153, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
+      { lat: 37.49857, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
+      { lat: 37.48817, lng: 127.03671, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" }
+      // 여기에 다른 지점 추가 가능
     ];
 
-    function saveCompleted(title) {
+    function markComplete(title) {
       localStorage.setItem(`completed-${title}`, "true");
     }
 
@@ -49,52 +59,78 @@
       return localStorage.getItem(`completed-${title}`) === "true";
     }
 
-    function countCompletedInDistrict(districtName) {
-      return markerData.filter(item => {
-        return item.title.includes(districtName) && isCompleted(item.title);
-      }).length;
+    function countCompleted(keyword) {
+      return markerData.filter(item => item.title.includes(keyword) && isCompleted(item.title)).length;
+    }
+
+    function renderStats(keyword) {
+      const total = markerData.filter(item => item.title.includes(keyword)).length;
+      const completed = countCompleted(keyword);
+      document.getElementById("statsBox").innerHTML =
+        `<b>${keyword}</b><br>총 지점: ${total}<br>완료 지점: ${completed}`;
     }
 
     function renderMap(filteredData = markerData) {
       const mapContainer = document.getElementById("map");
       const mapOption = { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 8 };
       map = new kakao.maps.Map(mapContainer, mapOption);
+      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
 
-      filteredData.forEach((data) => {
+      filteredData.forEach(data => {
         const position = new kakao.maps.LatLng(data.lat, data.lng);
-        const iconUrl = isCompleted(data.title) ? "https://cdn-icons-png.flaticon.com/512/845/845646.png" : "https://cdn-icons-png.flaticon.com/512/545/545682.png";
+        const iconUrl = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
         const markerImage = new kakao.maps.MarkerImage(iconUrl, new kakao.maps.Size(32, 32));
+
         const marker = new kakao.maps.Marker({
-          map: map,
           position: position,
+          map: map,
           image: markerImage
         });
 
-        kakao.maps.event.addListener(marker, 'click', function() {
-          saveCompleted(data.title);
+        kakao.maps.event.addListener(marker, "click", () => {
+          markComplete(data.title);
           alert(`✅ 완료 처리: ${data.title}`);
-          renderMap(filteredData); // 다시 렌더링해서 아이콘 업데이트
+          const keyword = document.getElementById("searchInput").value.trim();
+          const filtered = keyword ? markerData.filter(item => item.title.includes(keyword)) : markerData;
+          renderMap(filtered);
+          if (keyword) renderStats(keyword);
         });
       });
     }
 
-    function updateStats(districtName) {
-      const total = markerData.filter(m => m.title.includes(districtName)).length;
-      const completed = countCompletedInDistrict(districtName);
-      document.getElementById("statsBox").innerHTML =
-        `<b>${districtName}</b><br>총 지점 수: ${total}<br>완료 지점 수: ${completed}`;
-    }
-
     document.getElementById("searchInput").addEventListener("input", function() {
       const keyword = this.value.trim();
-      if (keyword.length === 0) {
-        renderMap(markerData);
+      if (keyword === "") {
+        renderMap();
         document.getElementById("statsBox").innerHTML = "";
-        return;
+      } else {
+        const filtered = markerData.filter(item => item.title.includes(keyword));
+        renderMap(filtered);
+        renderStats(keyword);
       }
-      const filtered = markerData.filter(item => item.title.includes(keyword));
-      renderMap(filtered);
-      updateStats(keyword);
+    });
+
+    // 실시간 위치 추적
+    document.getElementById("locateBtn").addEventListener("click", function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const loc = new kakao.maps.LatLng(lat, lng);
+          map.setCenter(loc);
+
+          if (userMarker) userMarker.setMap(null);
+          userMarker = new kakao.maps.Marker({ position: loc, map: map });
+        }, function(error) {
+          alert("📡 위치 추적에 실패했습니다: " + error.message);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10000
+        });
+      } else {
+        alert("이 브라우저는 위치 추적을 지원하지 않습니다.");
+      }
     });
 
     renderMap();
