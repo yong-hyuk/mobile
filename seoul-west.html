@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>2025 서울 주택사면 대상지</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true"></script>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69&autoload=true"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; font-family:sans-serif; }
     #map { width:100%; height:100%; }
@@ -46,7 +46,7 @@
     const completedIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
 
     const markerData = [
-        { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
+       { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
      { lat: 37.488175, lng: 127.036711111111, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" },
      { lat: 37.4808638888889, lng: 127.081063888889, title: "강남-주택-002(1)/강남구/C", pdf: "pdf/강남-주택-002(1).pdf" },
@@ -1207,6 +1207,7 @@
      { lat: 37.4876805555556, lng: 127.124491666667, title: "옹벽(문정동 40-16)/송파구/B", pdf: "pdf/옹벽(문정동 40-16).pdf" },
      { lat: 37.4874666666667, lng: 127.124513888889, title: "옹벽(문정동 40-17)/송파구/B", pdf: "pdf/옹벽(문정동 40-17).pdf" },
      { lat: 37.5563055555556, lng: 127.147016666667, title: "서울 강동 고덕 N1지구/강동구/C", pdf: "pdf/서울 강동 고덕 N1지구.pdf" }
+
     ];
 
     function isCompleted(title) {
@@ -1242,7 +1243,7 @@
       dataList.forEach(data => {
         const pos = new kakao.maps.LatLng(data.lat, data.lng);
         const icon = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
-        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(24, 35));
+        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(20, 27));
 
         const marker = new kakao.maps.Marker({ position: pos, map, image: markerImage });
 
