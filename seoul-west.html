@@ -4,14 +4,45 @@
   <meta charset="UTF-8" />
   <title>서울 서부 지도</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { width: 100%; height: 90vh; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
     #controls {
-      padding: 10px;
+      height: auto;
+      padding: 5px 10px;
       background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #districtSelect {
+      font-size: 13px;
+      padding: 3px 6px;
+      height: 30px;
+      max-width: 150px;
+    }
+
+    #map {
+      width: 100%;
+      height: calc(100vh - 40px);
+    }
+
+    @media (max-width: 600px) {
+      #districtSelect {
+        width: 100px;
+        font-size: 12px;
+      }
+      #controls {
+        flex-wrap: wrap;
+        padding: 5px;
+      }
     }
   </style>
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&libraries=clusterer"></script>
 </head>
 <body>
 
@@ -19,7 +50,7 @@
   <label>자치구 선택:
     <select id="districtSelect">
       <option value="">-- 전체 보기 --</option>
-    <select id="districtSelect">
+   <select id="districtSelect">
   <option value="">-- 전체 보기 --</option>
   <option value="강남구">강남구</option>
   <option value="강동구">강동구</option>
