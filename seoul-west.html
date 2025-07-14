@@ -1235,7 +1235,7 @@ function getMarkerIcon(title, completed) {
   const grade = title.split("/")[1]; // A, B, C 등
   const suffix = completed ? "-done" : "";
   return new kakao.maps.MarkerImage(
-    `img/pin-${grade}${suffix}.png`,
+    `pin.png`,
     new kakao.maps.Size(24, 35)
   );
 }
