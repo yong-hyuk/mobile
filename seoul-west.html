@@ -1246,7 +1246,7 @@
       filtered.forEach(data => {
         const pos = new kakao.maps.LatLng(data.lat, data.lng);
         const icon = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
-        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(24, 35));
+        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(20, 28));
 
         const marker = new kakao.maps.Marker({ position: pos, map, image: markerImage });
         allMarkers.push(marker);
