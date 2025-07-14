@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>2025 서울 주택사면 대상지</title>
+  <title>서울 주택사면 대상지</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true"></script>
   <style>
@@ -33,20 +33,19 @@
 </head>
 <body>
   <div id="controlPanel">
-    <input type="text" id="searchInput" placeholder="자치구 이름 (예: 강남구)" />
+    <input type="text" id="searchInput" placeholder="자치구 입력 (예: 강남구)" />
   </div>
   <div id="map"></div>
   <div id="statsBox"></div>
-  <button id="locateBtn">실시간 위치</button>
+  <button id="locateBtn">실시간 위치 추적</button>
 
   <script>
     let map, userMarker;
-
     const defaultIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
     const completedIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
 
     const markerData = [
-        { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
+       { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
      { lat: 37.488175, lng: 127.036711111111, title: "강남-주택-001/강남구/C", pdf: "pdf/강남-주택-001.pdf" },
      { lat: 37.4808638888889, lng: 127.081063888889, title: "강남-주택-002(1)/강남구/C", pdf: "pdf/강남-주택-002(1).pdf" },
@@ -1207,8 +1206,10 @@
      { lat: 37.4876805555556, lng: 127.124491666667, title: "옹벽(문정동 40-16)/송파구/B", pdf: "pdf/옹벽(문정동 40-16).pdf" },
      { lat: 37.4874666666667, lng: 127.124513888889, title: "옹벽(문정동 40-17)/송파구/B", pdf: "pdf/옹벽(문정동 40-17).pdf" },
      { lat: 37.5563055555556, lng: 127.147016666667, title: "서울 강동 고덕 N1지구/강동구/C", pdf: "pdf/서울 강동 고덕 N1지구.pdf" }
-      // 더 많은 데이터 추가 가능
+      // 필요에 따라 추가 가능
     ];
+
+    const allMarkers = [];
 
     function isCompleted(title) {
       return localStorage.getItem(`completed-${title}`) === "true";
@@ -1235,43 +1236,48 @@
         `<strong>${district} 완료 현황</strong><br>총 지점: ${total}<br>완료 지점: ${completed}`;
     }
 
-    function createMarkers(filteredData) {
-      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
-      map.setLevel(8);
+    function clearMarkers() {
+      allMarkers.forEach(m => m.setMap(null));
+      allMarkers.length = 0;
+    }
 
-      // 마커 제거
-      map.getContainer().querySelectorAll("img").forEach(el => el.remove());
-
-      filteredData.forEach(data => {
-        const position = new kakao.maps.LatLng(data.lat, data.lng);
+    function createMarkers(filtered) {
+      clearMarkers();
+      filtered.forEach(data => {
+        const pos = new kakao.maps.LatLng(data.lat, data.lng);
         const icon = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
-        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(20, 28));
+        const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(24, 35));
 
-        const marker = new kakao.maps.Marker({ position, map, image: markerImage });
+        const marker = new kakao.maps.Marker({ position: pos, map, image: markerImage });
+        allMarkers.push(marker);
 
-        const html =
-          `<div style="padding:5px;font-size:13px;">
+        const html = `
+          <div style="padding:5px;font-size:13px;">
             <strong>${data.title}</strong><br/>
-            <label><input type="checkbox" ${isCompleted(data.title) ? "checked" : ""}
-              onchange="toggleComplete('${data.title}', this)"/> 완료</label><br/>
+            <label>
+              <input type="checkbox" ${isCompleted(data.title) ? "checked" : ""}
+              onchange="toggleComplete('${data.title}')"/> 완료
+            </label><br/>
             <a href="${data.pdf}" target="_blank">[PDF 보기]</a>
           </div>`;
 
         const infoWindow = new kakao.maps.InfoWindow({ content: html, removable: true });
-        kakao.maps.event.addListener(marker, "click", () => {
-          infoWindow.open(map, marker);
-        });
+        kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
       });
     }
 
-    window.toggleComplete = function(title, checkbox) {
-      setCompleted(title, checkbox.checked);
+    window.toggleComplete = function(title) {
+      const newState = !isCompleted(title);
+      setCompleted(title, newState);
+
       const keyword = document.getElementById("searchInput").value.trim();
       const filtered = keyword
         ? markerData.filter(d => extractDistrict(d.title) === keyword)
         : markerData;
+
       createMarkers(filtered);
-      if (filtered.length > 0) updateStats(extractDistrict(filtered[0].title));
+      if (keyword && filtered.length > 0) updateStats(keyword);
+      else document.getElementById("statsBox").innerHTML = "";
     };
 
     document.getElementById("searchInput").addEventListener("input", function () {
@@ -1279,8 +1285,9 @@
       const filtered = keyword
         ? markerData.filter(d => extractDistrict(d.title) === keyword)
         : markerData;
+
       createMarkers(filtered);
-      if (filtered.length > 0) updateStats(extractDistrict(filtered[0].title));
+      if (keyword && filtered.length > 0) updateStats(keyword);
       else document.getElementById("statsBox").innerHTML = "";
     });
 
@@ -1297,11 +1304,14 @@
       }
     });
 
-    map = new kakao.maps.Map(document.getElementById("map"), {
-      center: new kakao.maps.LatLng(37.5665, 126.9780),
-      level: 8
-    });
-    createMarkers(markerData);
+    window.onload = function () {
+      map = new kakao.maps.Map(document.getElementById("map"), {
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 8
+      });
+      map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+      createMarkers(markerData);
+    };
   </script>
 </body>
 </html>
