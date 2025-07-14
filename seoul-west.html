@@ -1261,8 +1261,24 @@
 
         const infoWindow = new kakao.maps.InfoWindow({ content: infoHtml, removable: true });
 
-        kakao.maps.event.addListener(marker, "click", () => {
-          infoWindow.open(map, marker);
+       kakao.maps.event.addListener(marker, "click", () => {
+  const newState = !isCompleted(data.title);
+  setCompleted(data.title, newState);
+
+  // 아이콘만 교체 (전체 재렌더링 없이)
+  const newIcon = new kakao.maps.MarkerImage(
+    newState ? completedIconUrl : defaultIconUrl,
+    new kakao.maps.Size(32, 32)
+  );
+  marker.setImage(newIcon);
+
+  // 통계만 갱신
+  const keyword = document.getElementById("searchInput").value.trim();
+  if (keyword) {
+    const district = extractDistrict(data.title);
+    updateStats(district);
+  }
+});
         });
       });
     }
