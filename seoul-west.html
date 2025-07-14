@@ -60,16 +60,16 @@
       new kakao.maps.Size(24, 35)
     );
    const abImage = new kakao.maps.MarkerImage(
-  "https://raw.githubusercontent.com/yong-hyuk/mobile/main/placeholder.png",
+  "https://raw.githubusercontent.com/yong-hyuk/mobile/main/pin_24x35.png",
   new kakao.maps.Size(24, 35),
   { offset: new kakao.maps.Point(12, 35) }
 );
 
-    function getGradeIcon(grade, isCompleted) {
-      if (isCompleted) return completedImage;
-      if (grade === "A" || grade === "B") return abImage;
-      return defaultImage;
-    }
+function getGradeIcon(grade, isCompleted) {
+  if (isCompleted) return completedImage;
+  if (grade === "A" || grade === "B") return abImage;
+  return defaultImage;
+}
 
     function loadCompleted() {
       const saved = localStorage.getItem('completedMarkers');
