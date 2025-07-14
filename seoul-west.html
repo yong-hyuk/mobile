@@ -59,6 +59,16 @@
       "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png",
       new kakao.maps.Size(24, 35)
     );
+    const abImage = new kakao.maps.MarkerImage(
+      "https://cdn-icons-png.flaticon.com/512/190/190411.png",
+      new kakao.maps.Size(24, 35)
+    );
+
+    function getGradeIcon(grade, isCompleted) {
+      if (isCompleted) return completedImage;
+      if (grade === "A" || grade === "B") return abImage;
+      return defaultImage;
+    }
 
     function loadCompleted() {
       const saved = localStorage.getItem('completedMarkers');
@@ -98,9 +108,13 @@
         const position = new kakao.maps.LatLng(data.lat, data.lng);
         bounds.extend(position);
 
+        const gradeMatch = data.title.match(/\/([A-E])$/);
+        const grade = gradeMatch ? gradeMatch[1] : "기타";
+        const isCompleted = completedSet.has(index);
+
         const marker = new kakao.maps.Marker({
           position,
-          image: completedSet.has(index) ? completedImage : defaultImage
+          image: getGradeIcon(grade, isCompleted)
         });
 
         const info = document.createElement('div');
@@ -121,11 +135,10 @@
           chk.onclick = () => {
             if (chk.checked) {
               completedSet.add(index);
-              marker.setImage(completedImage);
             } else {
               completedSet.delete(index);
-              marker.setImage(defaultImage);
             }
+            marker.setImage(getGradeIcon(grade, completedSet.has(index)));
             saveCompleted();
             updateStats(filtered);
           };
@@ -136,7 +149,6 @@
 
       clusterer.addMarkers(markers);
       if (filtered.length > 0) map.setBounds(bounds);
-
       updateStats(filtered);
     }
 
