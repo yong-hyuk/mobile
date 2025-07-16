@@ -1267,18 +1267,27 @@
     }
 
     window.toggleComplete = function(title) {
-      const newState = !isCompleted(title);
-      setCompleted(title, newState);
+  const newState = !isCompleted(title);
+  setCompleted(title, newState);
 
-      const keyword = document.getElementById("searchInput").value.trim();
-      const filtered = keyword
-        ? markerData.filter(d => extractDistrict(d.title) === keyword)
-        : markerData;
+  // 현재 입력된 자치구 필터 유지
+  const keyword = document.getElementById("searchInput").value.trim();
 
-      createMarkers(filtered);
-      if (keyword && filtered.length > 0) updateStats(keyword);
-      else document.getElementById("statsBox").innerHTML = "";
-    };
+  const filtered = keyword
+    ? markerData.filter(d => extractDistrict(d.title) === keyword)
+    : markerData;
+
+  // 마커와 아이콘 다시 그림
+  createMarkers(filtered);
+
+  // 통계도 함께 업데이트
+  if (keyword && filtered.length > 0) {
+    updateStats(keyword);
+  } else {
+    document.getElementById("statsBox").innerHTML = "";
+  }
+};
+
 
     document.getElementById("searchInput").addEventListener("input", function () {
       const keyword = this.value.trim();
