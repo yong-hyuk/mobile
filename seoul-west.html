@@ -29,12 +29,35 @@
       border: none; border-radius: 12px; font-size: 16px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
     }
+ #backup-controls {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+#backup-controls button,
+#backup-controls input[type="file"] {
+  margin-top: 5px;
+  width: 100%;
+}
+
   </style>
 </head>
 <body>
   <div id="controlPanel">
     <input type="text" id="searchInput" placeholder="자치구 입력 (예: 강남구)" />
   </div>
+<div id="backup-controls">
+  <button onclick="backupChecklist()">백업하기</button>
+  <input type="file" id="restoreFileInput" accept=".json" />
+  <button onclick="restoreChecklist()">복원하기</button>
+</div>
+
+  
   <div id="map"></div>
   <div id="statsBox"></div>
   <button id="locateBtn">실시간 위치 추적</button>
@@ -1322,5 +1345,66 @@
       createMarkers(markerData);
     };
   </script>
+  <script>
+ function backupChecklist() {
+  const completedItems = {};
+  for(let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith("completed-")) {
+      completedItems[key] = localStorage.getItem(key);
+    }
+  }
+
+  if (Object.keys(completedItems).length === 0) {
+    alert("백업할 완료 목록이 없습니다.");
+    return;
+  }
+
+  const dataStr = JSON.stringify(completedItems);
+  const now = new Date();
+  const timestamp = now.toISOString().slice(0, 16).replace("T", "_").replace(":", "-");
+  const filename = `완료목록백업_${timestamp}.json`;
+
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
+  function restoreChecklist() {
+  const fileInput = document.getElementById('restoreFileInput');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("복원할 파일을 먼저 선택하세요.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const completedItems = JSON.parse(event.target.result);
+      for (const key in completedItems) {
+        if (completedItems.hasOwnProperty(key)) {
+          localStorage.setItem(key, completedItems[key]);
+        }
+      }
+      alert("복원이 완료되었습니다. 새로고침하면 반영됩니다.");
+    } catch (e) {
+      alert("유효하지 않은 JSON 파일입니다.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+</script>
+
 </body>
 </html>
