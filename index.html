@@ -508,10 +508,15 @@
         const info = document.createElement('div');
         info.style.padding = '5px';
         info.style.fontSize = '15px';
-        info.innerHTML = `
-          ${data.title}<br/>
-          <label><input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료</label>
-        `;
+         const parts = data.title.split('/');
+         const placeName = parts[1]?.trim();  // 주소
+
+info.innerHTML = `
+  ${data.title}<br/>
+  <label><input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료</label><br/>
+  <a href="https://map.kakao.com/link/to/${encodeURIComponent(placeName)},${data.lat},${data.lng}" target="_blank">🧭 길찾기</a>
+`;
+
 
         const infowindow = new kakao.maps.InfoWindow({ content: info, removable: true });
 
