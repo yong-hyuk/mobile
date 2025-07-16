@@ -46,12 +46,14 @@
 }
 @media (max-width: 600px) {
   #backup-controls {
-    top: auto;
-    bottom: 10px;
-    right: 10px;
+    position: fixed;  /* 반드시 유지 */
+    top: 10px !important;
+    right: 10px !important;
     width: 120px;
     padding: 5px;
     font-size: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 1000;
   }
 
   #backup-controls button,
