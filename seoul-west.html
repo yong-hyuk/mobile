@@ -46,14 +46,13 @@
 }
 @media (max-width: 600px) {
   #backup-controls {
-    position: fixed;  /* 반드시 유지 */
-    top: 10px !important;
-    right: 10px !important;
+    top: 10px;
+    right: 10px;
+    left: auto;
+    bottom: auto;
     width: 120px;
     padding: 5px;
     font-size: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 1000;
   }
 
   #backup-controls button,
@@ -78,7 +77,7 @@
   
   <div id="map"></div>
   <div id="statsBox"></div>
-  <button id="locateBtn">현위치</button>
+  <button id="locateBtn">실시간 위치 추적</button>
 
   <script>
     let map, userMarker;
@@ -1282,7 +1281,7 @@
       allMarkers.length = 0;
     }
 
-    function createMarkers(filtered) {
+function createMarkers(filtered) {
       clearMarkers();
       filtered.forEach(data => {
         const pos = new kakao.maps.LatLng(data.lat, data.lng);
@@ -1292,20 +1291,23 @@
         const marker = new kakao.maps.Marker({ position: pos, map, image: markerImage });
         allMarkers.push(marker);
 
-        const html = `
-          <div style="padding:5px;font-size:13px;">
-            <strong>${data.title}</strong><br/>
-            <label>
-              <input type="checkbox" ${isCompleted(data.title) ? "checked" : ""}
-              onchange="toggleComplete('${data.title}')"/> 완료
-            </label><br/>
-            <a href="${data.pdf}" target="_blank">[PDF 보기]</a>
-          </div>`;
+    const html = `
+      <div style="padding:5px; font-size:13px; max-width:250px; word-break:break-word;">
+        <strong>${data.title}</strong><br/>
+        <a href="${data.pdf}" target="_blank">📄 PDF 보기</a><br/>
+        <a href="https://map.kakao.com/link/to/목적지,${data.lat},${data.lng}" target="_blank">📍 길찾기</a><br/>
+        <a href="https://map.kakao.com/link/roadview/${data.lat},${data.lng}" target="_blank">🌐 로드뷰 보기</a><br/>
+        <label>
+          <input type="checkbox" onchange="toggleComplete('${data.title}')" ${isCompleted(data.title) ? "checked" : ""}>
+          완료
+        </label>
+      </div>
+    `;
 
-        const infoWindow = new kakao.maps.InfoWindow({ content: html, removable: true });
-        kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
-      });
-    }
+    const infoWindow = new kakao.maps.InfoWindow({ content: html, removable: true });
+    kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
+  });
+}
 
     window.toggleComplete = function(title) {
   const newState = !isCompleted(title);
