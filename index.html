@@ -64,7 +64,7 @@
       const markers = [];
 
       const markerData = [
-          { lat: 35.7081325, lng: 128.7210553, title: "경부선 2/청도군 화양읍 송금리 900-1/B" },
+         { lat: 35.7081325, lng: 128.7210553, title: "경부선 2/청도군 화양읍 송금리 900-1/B" },
      { lat: 35.7025661, lng: 128.7143358, title: "경부선 3/청도군 화양읍 다로리 563-17/C" },
      { lat: 35.654675, lng: 128.7435322, title: "경부선 4/청도군 청도읍 송읍리 산 1-2/B" },
      { lat: 35.6256447, lng: 128.7612058, title: "경부선 5/청도군 청도읍 월곡리 65-3/B" },
@@ -498,7 +498,13 @@
       );
 
       markerData.forEach((data, index) => {
-        const position = new kakao.maps.LatLng(data.lat, data.lng);
+        // 겹치는 마커를 클릭 가능하도록 약간 오프셋 적용
+        const jitter = 0.00003;
+        const position = new kakao.maps.LatLng(
+          data.lat + (Math.random() - 0.5) * jitter,
+          data.lng + (Math.random() - 0.5) * jitter
+        );
+
         const marker = new kakao.maps.Marker({
           position,
           map,
@@ -508,15 +514,14 @@
         const info = document.createElement('div');
         info.style.padding = '5px';
         info.style.fontSize = '15px';
-         const parts = data.title.split('/');
-         const placeName = parts[1]?.trim();  // 주소
+        const parts = data.title.split('/');
+        const placeName = parts[1]?.trim();
 
-info.innerHTML = `
-  ${data.title}<br/>
-  <label><input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료</label><br/>
-  <a href="https://map.kakao.com/link/to/${encodeURIComponent(placeName)},${data.lat},${data.lng}" target="_blank">🧭 길찾기</a>
-`;
-
+        info.innerHTML = `
+          ${data.title}<br/>
+          <label><input type="checkbox" id="chk-${index}" style="transform: scale(1.3); margin-right: 6px;" /> 완료</label><br/>
+          <a href="https://map.kakao.com/link/to/${encodeURIComponent(placeName)},${data.lat},${data.lng}" target="_blank">🧭 길찾기</a>
+        `;
 
         const infowindow = new kakao.maps.InfoWindow({ content: info, removable: true });
 
