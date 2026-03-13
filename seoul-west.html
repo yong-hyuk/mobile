@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>서울 주택사면 대상지</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true"></script>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=abf50f881fbafdf6787347059a09b69c&autoload=true&libraries=services"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; font-family:sans-serif; }
     #map { width:100%; height:100%; }
@@ -16,6 +16,37 @@
       padding: 8px; width: 150px; font-size: 15px;
       border: 1px solid #ccc; border-radius: 6px;
     }
+    #searchPanel {
+      position: absolute; top: 60px; left: 10px; z-index: 10;
+      background: rgba(255,255,255,0.97); padding: 10px;
+      border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      width: 280px;
+    }
+    #searchPanel input {
+      padding: 7px 10px; width: calc(100% - 70px); font-size: 14px;
+      border: 1px solid #ccc; border-radius: 6px;
+    }
+    #searchPanel button {
+      padding: 7px 10px; font-size: 13px; margin-left: 4px;
+      background: #007bff; color: white; border: none;
+      border-radius: 6px; cursor: pointer; vertical-align: middle;
+    }
+    #searchPanel button:hover { background: #0056b3; }
+    #searchPanel .tab-btn {
+      background: #eee; color: #333; margin: 0 2px 6px 0;
+      border-radius: 14px; padding: 4px 12px; font-size: 12px;
+    }
+    #searchPanel .tab-btn.active { background: #007bff; color: white; }
+    #titleResults {
+      max-height: 220px; overflow-y: auto; margin-top: 6px; font-size: 13px;
+    }
+    .result-item {
+      padding: 6px 8px; border-bottom: 1px solid #eee; cursor: pointer;
+      border-radius: 4px;
+    }
+    .result-item:hover { background: #f0f4ff; }
+    .result-item .r-title { font-weight: bold; color: #222; }
+    .result-item .r-dist { font-size: 12px; color: #777; }
     #statsBox {
       position: absolute; bottom: 15px; left: 10px; z-index: 10;
       background: rgba(255,255,255,0.95); padding: 10px;
@@ -54,7 +85,7 @@
     padding: 5px;
     font-size: 12px;
   }
-
+ 
   #backup-controls button,
   #backup-controls input[type="file"] {
     width: 100%;
@@ -68,22 +99,40 @@
   <div id="controlPanel">
     <input type="text" id="searchInput" placeholder="자치구 검색" />
   </div>
+ 
+  <!-- 검색 패널 -->
+  <div id="searchPanel">
+    <div>
+      <button class="tab-btn active" id="tabTitle" onclick="switchTab('title')">📌 명칭 검색</button>
+      <button class="tab-btn" id="tabAddr" onclick="switchTab('addr')">🗺️ 주소 검색</button>
+    </div>
+    <div id="titleSearchArea">
+      <input type="text" id="titleInput" placeholder="명칭 입력 (예: 강남, 주택)" oninput="searchTitle()" />
+      <button onclick="searchTitle()">검색</button>
+      <div id="titleResults"></div>
+    </div>
+    <div id="addrSearchArea" style="display:none">
+      <input type="text" id="addrInput" placeholder="주소 입력 (예: 서울 마포구)" onkeydown="if(event.key==='Enter') searchAddress()" />
+      <button onclick="searchAddress()">검색</button>
+      <div id="addrResults" style="max-height:220px;overflow-y:auto;margin-top:6px;font-size:13px;"></div>
+    </div>
+  </div>
 <div id="backup-controls">
   <button onclick="backupChecklist()">백업</button>
   <input type="file" id="restoreFileInput" accept=".json" />
   <button onclick="restoreChecklist()">복원</button>
 </div>
-
+ 
   
   <div id="map"></div>
   <div id="statsBox"></div>
   <button id="locateBtn">실시간 위치 추적</button>
-
+ 
   <script>
     let map, userMarker;
     const defaultIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
     const completedIconUrl = "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png";
-
+ 
     const markerData = [
        { lat: 37.5163527777778, lng: 127.061530555556, title: "강남-건축-002/강남구/C", pdf: "pdf/강남-건축-002.pdf" },
      { lat: 37.4985777777778, lng: 127.03595, title: "강남-건축-003/강남구/C", pdf: "pdf/강남-건축-003.pdf" },
@@ -1248,22 +1297,22 @@
      { lat: 37.5563055555556, lng: 127.147016666667, title: "서울 강동 고덕 N1지구/강동구/C", pdf: "pdf/서울 강동 고덕 N1지구.pdf" }
       // 필요에 따라 추가 가능
     ];
-
+ 
     const allMarkers = [];
-
+ 
     function isCompleted(title) {
       return localStorage.getItem(`completed-${title}`) === "true";
     }
-
+ 
     function setCompleted(title, value) {
       localStorage.setItem(`completed-${title}`, value ? "true" : "false");
     }
-
+ 
     function extractDistrict(title) {
       const parts = title.split("/");
       return parts.length >= 2 ? parts[1].trim() : "기타";
     }
-
+ 
     function updateStats(district) {
       let total = 0, completed = 0;
       markerData.forEach(data => {
@@ -1275,22 +1324,22 @@
       document.getElementById("statsBox").innerHTML =
         `<strong>${district} 완료 현황</strong><br>총 지점: ${total}<br>완료 지점: ${completed}`;
     }
-
+ 
     function clearMarkers() {
       allMarkers.forEach(m => m.setMap(null));
       allMarkers.length = 0;
     }
-
+ 
 function createMarkers(filtered) {
       clearMarkers();
       filtered.forEach(data => {
         const pos = new kakao.maps.LatLng(data.lat, data.lng);
         const icon = isCompleted(data.title) ? completedIconUrl : defaultIconUrl;
         const markerImage = new kakao.maps.MarkerImage(icon, new kakao.maps.Size(20, 28));
-
+ 
         const marker = new kakao.maps.Marker({ position: pos, map, image: markerImage });
         allMarkers.push(marker);
-
+ 
     const html = `
       <div style="padding:5px; font-size:13px; max-width:250px; word-break:break-word;">
         <strong>${data.title}</strong><br/>
@@ -1303,26 +1352,26 @@ function createMarkers(filtered) {
         </label>
       </div>
     `;
-
+ 
     const infoWindow = new kakao.maps.InfoWindow({ content: html, removable: true });
     kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
   });
 }
-
+ 
     window.toggleComplete = function(title) {
   const newState = !isCompleted(title);
   setCompleted(title, newState);
-
+ 
   // 현재 입력된 자치구 필터 유지
   const keyword = document.getElementById("searchInput").value.trim();
-
+ 
   const filtered = keyword
     ? markerData.filter(d => extractDistrict(d.title) === keyword)
     : markerData;
-
+ 
   // 마커와 아이콘 다시 그림
   createMarkers(filtered);
-
+ 
   // 통계도 함께 업데이트
   if (keyword && filtered.length > 0) {
     updateStats(keyword);
@@ -1330,19 +1379,19 @@ function createMarkers(filtered) {
     document.getElementById("statsBox").innerHTML = "";
   }
 };
-
-
+ 
+ 
     document.getElementById("searchInput").addEventListener("input", function () {
       const keyword = this.value.trim();
       const filtered = keyword
         ? markerData.filter(d => extractDistrict(d.title) === keyword)
         : markerData;
-
+ 
       createMarkers(filtered);
       if (keyword && filtered.length > 0) updateStats(keyword);
       else document.getElementById("statsBox").innerHTML = "";
     });
-
+ 
     document.getElementById("locateBtn").addEventListener("click", () => {
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
@@ -1355,7 +1404,105 @@ function createMarkers(filtered) {
         alert("이 브라우저는 위치 추적을 지원하지 않습니다.");
       }
     });
-
+ 
+    // ===== 탭 전환 =====
+    function switchTab(tab) {
+      document.getElementById('tabTitle').classList.toggle('active', tab === 'title');
+      document.getElementById('tabAddr').classList.toggle('active', tab === 'addr');
+      document.getElementById('titleSearchArea').style.display = tab === 'title' ? '' : 'none';
+      document.getElementById('addrSearchArea').style.display = tab === 'addr' ? '' : 'none';
+    }
+ 
+    // ===== 명칭 검색 =====
+    let searchMarkers = [];
+    function searchTitle() {
+      const keyword = document.getElementById('titleInput').value.trim();
+      const box = document.getElementById('titleResults');
+      if (!keyword) { box.innerHTML = ''; return; }
+ 
+      const results = markerData.filter(d =>
+        d.title.toLowerCase().includes(keyword.toLowerCase())
+      );
+ 
+      if (results.length === 0) {
+        box.innerHTML = '<div style="padding:8px;color:#888;">검색 결과가 없습니다.</div>';
+        return;
+      }
+ 
+      box.innerHTML = `<div style="font-size:12px;color:#555;padding:4px 0;">${results.length}건 검색됨</div>` +
+        results.map((d, i) => {
+          const parts = d.title.split('/');
+          return `<div class="result-item" onclick="goToMarker(${i}, '${d.title.replace(/'/g,"\\'")}')">
+            <div class="r-title">${parts[0]}</div>
+            <div class="r-dist">${parts[1] || ''} ${parts[2] ? '· 등급 ' + parts[2] : ''}</div>
+          </div>`;
+        }).join('');
+ 
+      // 검색된 마커만 표시
+      createMarkers(results);
+      if (results.length > 0) {
+        const bounds = new kakao.maps.LatLngBounds();
+        results.forEach(d => bounds.extend(new kakao.maps.LatLng(d.lat, d.lng)));
+        map.setBounds(bounds);
+      }
+    }
+ 
+    window.goToMarker = function(idx, title) {
+      const found = markerData.find(d => d.title === title);
+      if (!found) return;
+      map.setCenter(new kakao.maps.LatLng(found.lat, found.lng));
+      map.setLevel(3);
+    };
+ 
+    // ===== 주소 검색 =====
+    let geocoder, addrMarker;
+    function searchAddress() {
+      const keyword = document.getElementById('addrInput').value.trim();
+      const box = document.getElementById('addrResults');
+      if (!keyword) return;
+ 
+      if (!geocoder) geocoder = new kakao.maps.services.Geocoder();
+      const places = new kakao.maps.services.Places();
+ 
+      places.keywordSearch(keyword, function(data, status) {
+        if (status === kakao.maps.services.Status.OK && data.length > 0) {
+          box.innerHTML = data.slice(0, 5).map((item, i) =>
+            `<div class="result-item" onclick="moveToAddress(${item.y}, ${item.x}, '${item.place_name.replace(/'/g,"\\'")}')">
+              <div class="r-title">${item.place_name}</div>
+              <div class="r-dist">${item.road_address_name || item.address_name}</div>
+            </div>`
+          ).join('');
+        } else {
+          // 주소 검색 fallback
+          geocoder.addressSearch(keyword, function(result, status2) {
+            if (status2 === kakao.maps.services.Status.OK) {
+              box.innerHTML = result.slice(0, 5).map((item) =>
+                `<div class="result-item" onclick="moveToAddress(${item.y}, ${item.x}, '${item.address_name.replace(/'/g,"\\'")}')">
+                  <div class="r-title">${item.address_name}</div>
+                  <div class="r-dist">${item.road_address ? item.road_address.address_name : ''}</div>
+                </div>`
+              ).join('');
+            } else {
+              box.innerHTML = '<div style="padding:8px;color:#888;">검색 결과가 없습니다.</div>';
+            }
+          });
+        }
+      });
+    }
+ 
+    window.moveToAddress = function(lat, lng, name) {
+      const pos = new kakao.maps.LatLng(lat, lng);
+      map.setCenter(pos);
+      map.setLevel(4);
+      if (addrMarker) addrMarker.setMap(null);
+      addrMarker = new kakao.maps.Marker({ position: pos, map });
+      const iw = new kakao.maps.InfoWindow({
+        content: `<div style="padding:5px;font-size:13px;">${name}</div>`,
+        removable: true
+      });
+      iw.open(map, addrMarker);
+    };
+ 
     window.onload = function () {
       map = new kakao.maps.Map(document.getElementById("map"), {
         center: new kakao.maps.LatLng(37.5665, 126.9780),
@@ -1374,38 +1521,38 @@ function createMarkers(filtered) {
       completedItems[key] = localStorage.getItem(key);
     }
   }
-
+ 
   if (Object.keys(completedItems).length === 0) {
     alert("백업할 완료 목록이 없습니다.");
     return;
   }
-
+ 
   const dataStr = JSON.stringify(completedItems);
   const now = new Date();
   const timestamp = now.toISOString().slice(0, 16).replace("T", "_").replace(":", "-");
   const filename = `완료목록백업_${timestamp}.json`;
-
+ 
   const blob = new Blob([dataStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-
+ 
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();
-
+ 
   URL.revokeObjectURL(url);
 }
-
-
+ 
+ 
   function restoreChecklist() {
   const fileInput = document.getElementById('restoreFileInput');
   const file = fileInput.files[0];
-
+ 
   if (!file) {
     alert("복원할 파일을 먼저 선택하세요.");
     return;
   }
-
+ 
   const reader = new FileReader();
   reader.onload = function(event) {
     try {
@@ -1420,11 +1567,11 @@ function createMarkers(filtered) {
       alert("유효하지 않은 JSON 파일입니다.");
     }
   };
-
+ 
   reader.readAsText(file);
 }
-
+ 
 </script>
-
+ 
 </body>
 </html>
